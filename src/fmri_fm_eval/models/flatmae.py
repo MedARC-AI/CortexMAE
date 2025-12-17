@@ -2,6 +2,7 @@ from typing import Literal
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch import Tensor
 from einops import rearrange
 
@@ -28,25 +29,35 @@ class MaskedEncoderWrapper(nn.Module):
         x = batch["bold"]
         mask = batch["mask"]
 
-        # rearrange into a batch of clips and apply model as sliding window.
         B, C, T, H, W = x.shape
+
+        # pad time dimension to be divisible by num frames
+        # padding the mask excludes the patches from the forward pass
+        if T % self.num_frames != 0:
+            pad = self.num_frames - T % self.num_frames
+            x = F.pad(x, (0, 0, 0, 0, 0, pad))
+            mask = F.pad(mask, (0, 0, 0, 0, 0, pad))
+            T = T + pad
+
+        # rearrange into a batch of clips and apply model as sliding window.
         num_clips = T // self.num_frames
-        T_ = num_clips * self.num_frames
-        x = rearrange(x[:, :, :T_], "b c (n f) h w -> (b n) c f h w", n=num_clips)
-        mask = rearrange(mask[:, :, :T_], "b c (n f) h w -> (b n) c f h w", n=num_clips)
+        if num_clips > 1:
+            x = rearrange(x, "b c (n f) h w -> (b n) c f h w", n=num_clips)
+            mask = rearrange(mask, "b c (n f) h w -> (b n) c f h w", n=num_clips)
 
         cls_embeds, reg_embeds, patch_embeds = self.model.forward_embedding(x, mask)
 
         # rearrange clips back into single seq of embeddings.
-        if cls_embeds is not None:
-            cls_embeds = rearrange(cls_embeds, "(b n) l d -> b (n l) d", n=num_clips)
-            cls_embeds = cls_embeds.mean(1, keepdim=True)
-        if reg_embeds is not None:
-            reg_embeds = rearrange(reg_embeds, "(b n) l d -> b (n l) d", n=num_clips)
-        if patch_embeds is not None:
-            # nb, this is a lot of tokens. decide if this is really what we want to do.
-            # alternatively, could average pool over some of the grid dims (n, t, h, w).
-            patch_embeds = rearrange(patch_embeds, "(b n) l d -> b (n l) d", n=num_clips)
+        if num_clips > 1:
+            if cls_embeds is not None:
+                cls_embeds = rearrange(cls_embeds, "(b n) l d -> b (n l) d", n=num_clips)
+                cls_embeds = cls_embeds.mean(1, keepdim=True)
+            if reg_embeds is not None:
+                reg_embeds = rearrange(reg_embeds, "(b n) l d -> b (n l) d", n=num_clips)
+            if patch_embeds is not None:
+                # nb, this is a lot of tokens. decide if this is really what we want.
+                # we could also average pool over some of the grid dims (n, t, h, w).
+                patch_embeds = rearrange(patch_embeds, "(b n) l d -> b (n l) d", n=num_clips)
 
         return cls_embeds, reg_embeds, patch_embeds
 
