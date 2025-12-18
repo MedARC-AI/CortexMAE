@@ -70,8 +70,7 @@ datasets=(
 )
 dataset=${datasets[TASKID]}
 
-overrides="representation=${repr} epochs=1 batch_size=4 lr=0.001 num_workers=16"
-overrides="${overrides} debug=true wandb=false"
+overrides="representation=${repr} epochs=4 batch_size=4 lr=0.001 num_workers=16"
 
 notes="initial probe eval run (${model}/${repr}/${dataset})."
 
