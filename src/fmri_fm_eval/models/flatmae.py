@@ -78,6 +78,10 @@ class FlatTransform(nn.Module):
     def __call__(self, sample: dict[str, Tensor]) -> dict[str, Tensor]:
         bold = sample["bold"]
 
+        # temporal resample
+        # nb, pretraining data used pchip interpolation, but that's very slow.
+        bold = nisc.resample_timeseries(bold, tr=sample["tr"], new_tr=1.0, kind="linear")
+
         # sample-wise normalization
         if self.norm:
             dim = {"frame": 1, "global": None}[self.norm]
