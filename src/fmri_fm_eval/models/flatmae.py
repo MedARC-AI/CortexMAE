@@ -80,7 +80,8 @@ class FlatTransform(nn.Module):
 
         # temporal resample
         # nb, pretraining data used pchip interpolation, but that's very slow.
-        bold = nisc.resample_timeseries(bold, tr=sample["tr"], new_tr=1.0, kind="linear")
+        bold = nisc.resample_timeseries(bold.numpy(), tr=sample["tr"], new_tr=1.0, kind="linear")
+        bold = torch.as_tensor(bold, dtype=torch.float32)
 
         # sample-wise normalization
         if self.norm:
