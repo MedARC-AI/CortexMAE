@@ -31,16 +31,21 @@ class MaskedEncoderWrapper(nn.Module):
 
         B, C, T, H, W = x.shape
 
-        # pad time dimension to be divisible by num frames
+        # pad inputs that are too short
         # padding the mask excludes the patches from the forward pass
-        if T % self.num_frames != 0:
-            pad = self.num_frames - T % self.num_frames
+        if T < self.num_frames:
+            pad = self.num_frames - T
             x = F.pad(x, (0, 0, 0, 0, 0, pad))
             mask = F.pad(mask, (0, 0, 0, 0, 0, pad))
-            T = T + pad
+            T = self.num_frames
+
+        # truncate to divisible by num frames
+        num_clips = T // self.num_frames
+        T = num_clips * self.num_frames
+        x = x[:, :, :T]
+        mask = mask[:, :, :T]
 
         # rearrange into a batch of clips and apply model as sliding window.
-        num_clips = T // self.num_frames
         if num_clips > 1:
             x = rearrange(x, "b c (n f) h w -> (b n) c f h w", n=num_clips)
             mask = rearrange(mask, "b c (n f) h w -> (b n) c f h w", n=num_clips)
@@ -62,7 +67,7 @@ class MaskedEncoderWrapper(nn.Module):
         return cls_embeds, reg_embeds, patch_embeds
 
 
-class FlatTransform(nn.Module):
+class FlatTransform:
     mask: Tensor
 
     def __init__(
@@ -73,15 +78,19 @@ class FlatTransform(nn.Module):
         super().__init__()
         self.norm = norm
         self.clip_vmax = clip_vmax
-        self.register_buffer("mask", torch.tensor(_resampler.mask_))
+        self.target_tr = 1.0
+        self.mask = torch.tensor(_resampler.mask_)
 
     def __call__(self, sample: dict[str, Tensor]) -> dict[str, Tensor]:
         bold = sample["bold"]
+        tr = float(sample["tr"])
 
         # temporal resample
         # nb, pretraining data used pchip interpolation, but that's very slow.
-        bold = nisc.resample_timeseries(bold.numpy(), tr=sample["tr"], new_tr=1.0, kind="linear")
-        bold = torch.as_tensor(bold, dtype=torch.float32)
+        # TODO: we are allowing some tolerance to the tr, but we didn't pretrain with
+        # any tr variation. probably should do that, seems like a decent augmentation.
+        if abs(tr - self.target_tr) > 0.1:
+            bold = resample_to_tr(bold, tr=tr, target_tr=self.target_tr, mode="linear")
 
         # sample-wise normalization
         if self.norm:
@@ -114,6 +123,21 @@ def normalize(x: torch.Tensor, dim: int | None = None, eps: float = 1e-6) -> tor
     return x
 
 
+def resample_to_tr(x: Tensor, tr: float, target_tr: float, mode: str = "linear") -> Tensor:
+    T, D = x.shape
+    x = x.t().unsqueeze(0)  # [1, D, T]
+    x = F.interpolate(x, size=round(tr * T / target_tr), mode=mode)
+    x = x.squeeze(0).t()
+    return x
+
+
+# TODO: (maybe)
+#   - add random flat mae (call init_weights)
+#   - patch embed only (stripping off vit blocks)
+#   - extract features from different layer using feature extracton
+#     https://github.com/MedARC-AI/algonauts2025/blob/main/src/feature_extractor.py
+
+
 @register_model
 def flat_mae_base_patch16_16(**kwargs) -> tuple[FlatTransform, MaskedEncoderWrapper]:
     transform = FlatTransform()
@@ -127,4 +151,11 @@ def flat_mae_base_patch16_2(**kwargs) -> tuple[FlatTransform, MaskedEncoderWrapp
     transform = FlatTransform()
     model = models_mae.MaskedAutoencoderViT.from_pretrained("medarc/fm_mae_vit_base_patch16-2.hcp")
     model = MaskedEncoderWrapper(model.encoder)
+    return transform, model
+
+
+@register_model
+def flat_mae(*, ckpt_path: str, **kwargs) -> tuple[FlatTransform, MaskedEncoderWrapper]:
+    transform = FlatTransform()
+    model = models_mae.MaskedAutoencoderViT.from_checkpoint(ckpt_path, **kwargs)
     return transform, model
