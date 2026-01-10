@@ -755,6 +755,20 @@ class MaskedAutoencoderViT(nn.Module, PyTorchModelHubMixin):
     ):
         return self.encoder.forward_embedding(x, mask, mask_ratio)
 
+    @staticmethod
+    def from_checkpoint(ckpt_path: str, **kwargs) -> "MaskedAutoencoderViT":
+        ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=True)
+        args = ckpt["args"]
+        model_kwargs = {
+            k: args[k] for k in ["img_size", "in_chans", "num_frames", "patch_size", "t_patch_size"]
+        }
+        model_kwargs.update(args["model_kwargs"] or {})
+        model_kwargs.update(kwargs)
+        model_fn = locals()[args["model"]]
+        model = model_fn(**model_kwargs)
+        model.load_state_dict(ckpt["model"])
+        return model
+
 
 class MaskedViT(MaskedEncoder, PyTorchModelHubMixin):
     def __init__(

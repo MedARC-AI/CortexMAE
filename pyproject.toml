@@ -11,6 +11,7 @@ requires-python = ">=3.11"
 dependencies = [
     "datasets",
     "einops",
+    "fmri-fm-eval",
     "huggingface_hub",
     "ipython",
     "jaxtyping",
@@ -39,6 +40,7 @@ dependencies = [
 version_file = "src/_version.py"
 
 [tool.uv.sources]
+fmri-fm-eval = { git = "https://github.com/MedARC-AI/fmri-fm-eval.git" }
 nsdcode = { git = "https://github.com/cvnlab/nsdcode.git", rev = "bfd36a503cc90a3eb3ebfd69b269403f7e186924" }
 
 [tool.ruff]

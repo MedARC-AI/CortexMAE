@@ -27,6 +27,7 @@ datasets
 checkpoints
 wandb
 jobs
+output
 
 # Local scratch/tmp
 .scratch
