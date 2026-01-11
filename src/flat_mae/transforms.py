@@ -5,6 +5,8 @@ import torch
 import torchvision.transforms.v2 as v2
 import torchvision.tv_tensors as tvt
 import torch.nn.functional as F
+import nibabel as nib
+import numpy as np
 
 import fmri_fm_eval.nisc as nisc
 
@@ -99,6 +101,8 @@ class FlatUnmask:
     produce unmasked time series, shape (C, T, H, W).
     """
 
+    dim = 77763
+
     def __init__(self):
         resampler = nisc.flat_resampler_fslr64k_224_560()
         self.mask = torch.as_tensor(resampler.mask_)
@@ -106,6 +110,7 @@ class FlatUnmask:
     def __call__(self, sample: dict) -> dict:
         bold = sample["bold"]
         T, D = bold.shape
+        assert D == self.dim, f"input dim {D} doesn't match expected {self.dim}"
         bold_ = torch.zeros(1, T, *self.mask.shape)
         bold_[..., self.mask] = bold
         bold = bold_
@@ -129,11 +134,91 @@ class ParcelUnmask:
 
 
 class MNICortexUnmask:
+    """
+    unmasks mni cortex data into patchified format.
+    input: (T, D) where D=132032 -> output: bold (1, T, N, P), mask (N, P)
+    """
+
+    dim = 132032
+
+    def __init__(self, patch_size: int = 8, threshold: float = 0.25):
+        self.patch_size = patch_size
+        self.threshold = threshold
+
+        # load cortex mask from schaefer400 parcellation
+        roi_path = nisc.fetch_schaefer(400, space="mni")
+        img = nib.load(roi_path)
+        mask = np.ascontiguousarray(img.get_fdata().T) > 0  # (D, H, W)
+        assert mask.sum() == self.dim
+
+        # gather_ids: (N, P) array of indices in [0, D) into the original data
+        # patch_mask: (N, P) mask of non-background data in patchified space
+        gather_ids, patch_mask = _make_volume_patch_gather_ids(
+            mask, patch_size=patch_size, threshold=threshold
+        )
+
+        self.gather_ids = torch.as_tensor(gather_ids)
+        self.patch_mask = torch.as_tensor(patch_mask)
+        self.num_patches, self.patch_dim = self.patch_mask.shape
+
+        # indices to apply inverse transform
+        self.restore_ids = torch.argsort(self.gather_ids[self.patch_mask])
+        self.restore_mask = np.zeros(self.dim, dtype=bool)
+        self.restore_mask[self.gather_ids[self.patch_mask]] = True
+
     def __call__(self, sample: dict) -> dict:
-        raise NotImplementedError
+        bold = sample["bold"]
+        bold = self.transform(bold)
+        bold = bold[None]  # (1, T, N, P)
+        return {**sample, "bold": bold, "mask": self.patch_mask}
+
+    def transform(self, bold: torch.Tensor) -> torch.Tensor:
+        T, D = bold.shape
+        assert D == self.dim, f"input dim {D} doesn't match expected {self.dim}"
+
+        bold = bold[:, self.gather_ids] * self.patch_mask  # (T, N, P)
+        return bold
+
+    def inverse(self, bold: torch.Tensor) -> torch.Tensor:
+        T, N, P = bold.shape
+        bold_ = torch.zeros(T, self.dim, dtype=bold.dtype, device=bold.device)
+        bold_[:, self.restore_mask] = bold[:, self.patch_mask][:, self.restore_ids]
+        return bold_
 
     def __repr__(self):
-        return f"{self.__class__.__name__}()"
+        s = (
+            f"{self.num_patches}, {self.patch_dim}, "
+            f"patch_size={self.patch_size}, threshold={self.threshold}"
+        )
+        return f"{self.__class__.__name__}({s})"
+
+
+def _make_volume_patch_gather_ids(mask: np.ndarray, patch_size: int = 8, threshold: float = 0.25):
+    p = patch_size
+
+    # pad to divisible by patch_size
+    mask_pad = np.pad(mask, [(0, -d % p) for d in mask.shape])
+
+    # index mapping: position -> index into masked array, or -1 for background
+    ids = np.full(mask_pad.shape, -1, dtype=np.int64)
+    ids[mask_pad] = np.arange(mask_pad.sum())
+
+    # rearrange into 3D patches: (D, H, W) -> (N_total, P)
+    mask_patches = _to_patches(mask_pad, p)
+    ids_patches = _to_patches(ids, p)
+
+    # keep patches with sufficient brain coverage
+    keep = mask_patches.mean(axis=1) > threshold
+
+    gather_ids = ids_patches[keep]  # (N, P)
+    patch_mask = mask_patches[keep]
+    return gather_ids, patch_mask
+
+
+def _to_patches(x: np.ndarray, p: int):
+    D, H, W = x.shape
+    x = x.reshape(D // p, p, H // p, p, W // p, p)
+    return x.transpose(0, 2, 4, 1, 3, 5).reshape(-1, p**3)
 
 
 class FlatRandomResizedCrop:
