@@ -514,10 +514,12 @@ class Normalize(nn.Module):
         self.dim = dim
         self.eps = eps
 
-    def forward(self, x: Tensor, mask: Tensor | None = None) -> tuple[Tensor, Tensor, Tensor]:
+    def forward(
+        self, x: Tensor, mask: Tensor | None = None
+    ) -> tuple[Tensor, tuple[Tensor, Tensor]]:
         """
         Normalize input sequence along dim(s) after reshaping to grid.
-        Returns tuple of (x, mean, std).
+        Returns tuple of (x, stats) (where stats = (mean, std))
         """
         B, N, D = x.shape
         x = x.reshape((B, *self.grid_size, D))
@@ -529,7 +531,14 @@ class Normalize(nn.Module):
         mean = mean.expand_as(x).reshape(B, N, D)
         std = std.expand_as(x).reshape(B, N, D)
         x = x.reshape(B, N, D)
-        return x, mean, std
+        return x, (mean, std)
+
+    def inverse(self, x: Tensor, stats: tuple[Tensor, Tensor], mask: Tensor | None = None):
+        mean, std = stats
+        x = x * std + mean
+        if mask is not None:
+            x = x * mask
+        return x
 
     def extra_repr(self):
         return f"{self.grid_size}, dim={self.dim}"
@@ -544,6 +553,7 @@ def masked_normalize(
     num_obs = mask.sum(dim=dim, keepdim=True).clamp(min=1)
     mean = (mask * x).sum(dim=dim, keepdim=True) / num_obs
     var = (mask * (x - mean) ** 2).sum(dim=dim, keepdim=True) / num_obs
+    # TODO: why did I add eps to var and not std (after sqrt)?
     std = (var + eps) ** 0.5
     x = mask * (x - mean) / std
     return x, mean, std

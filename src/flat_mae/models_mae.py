@@ -578,13 +578,14 @@ class MaskedAutoencoderViT(nn.Module, PyTorchModelHubMixin):
 
         return img_mask, visible_mask, pred_mask
 
-    def prepare_targets(self, images: Tensor, img_mask: Tensor | None):
+    def prepare_targets(self, targets: Tensor, img_mask: Tensor | None):
         """
-        images: [B, C, H, W] or [B, C, T, H, W]
+        targets: [B, C, H, W] or [B, C, T, H, W]
+        targets can be the original images, or clean images if the input images have been noised
         img_mask: mask of valid data. only used for computing correct normalization
             stats. same shape and type as images.
         """
-        targets_patches = self.pred_patchify(images)  # [B, N, P]
+        targets_patches = self.pred_patchify(targets)  # [B, N, P]
 
         # target normalization
         if self.target_norm is not None:
@@ -593,7 +594,9 @@ class MaskedAutoencoderViT(nn.Module, PyTorchModelHubMixin):
                 img_mask_patches = self.pred_patchify(img_mask)
             else:
                 img_mask_patches = None
-            targets_patches, *targets_stats = self.target_norm(targets_patches, img_mask_patches)
+            targets_patches, targets_stats = self.target_norm(
+                targets_patches, mask=img_mask_patches
+            )
         else:
             targets_stats = None
 
@@ -604,6 +607,7 @@ class MaskedAutoencoderViT(nn.Module, PyTorchModelHubMixin):
         visible_mask: Tensor,
         pred_mask: Tensor | None = None,
         pred_mask_ratio: float | None = None,
+        pred_edge_pad: int | None = None,
     ):
         """
         prepare prediction mask by removing visible content
@@ -614,8 +618,9 @@ class MaskedAutoencoderViT(nn.Module, PyTorchModelHubMixin):
             pred_mask = torch.ones_like(visible_mask)
 
         # pad edges of visible mask to avoid interpolating across patch edges
-        if self.pred_edge_pad:
-            visible_mask = pad_image_mask(visible_mask, pad=self.pred_edge_pad)
+        pred_edge_pad = self.pred_edge_pad if pred_edge_pad is None else pred_edge_pad
+        if pred_edge_pad:
+            visible_mask = pad_image_mask(visible_mask, pad=pred_edge_pad)
 
         # don't decode visible pixels (duh)
         pred_mask = pred_mask * (1 - visible_mask)
@@ -687,8 +692,7 @@ class MaskedAutoencoderViT(nn.Module, PyTorchModelHubMixin):
         )
 
         if targets_stats is not None:
-            targets_mean, targets_std = targets_stats
-            preds = preds * targets_std + targets_mean
+            preds = self.target_norm.inverse(preds, targets_stats)
 
         pred_images = self.pred_patchify.unpatchify(preds)
         if img_mask is not None:
@@ -698,17 +702,22 @@ class MaskedAutoencoderViT(nn.Module, PyTorchModelHubMixin):
     def forward(
         self,
         images: Tensor,
+        *,
+        targets: Tensor | None = None,
         img_mask: Tensor | None = None,
         visible_mask: Tensor | None = None,
         pred_mask: Tensor | None = None,
         mask_ratio: float | None = 0.75,
         pred_mask_ratio: float | None = None,
+        pred_edge_pad: int | None = None,
         with_state: bool = True,
     ) -> Tensor | tuple[Tensor, dict[str, Tensor]]:
+        if targets is None:
+            targets = images
         img_mask, visible_mask, pred_mask = self.prepare_masks(
             img_mask, visible_mask, pred_mask, shape=images.shape, dtype=images.dtype
         )
-        targets_patches, targets_stats = self.prepare_targets(images, img_mask)
+        targets_patches, targets_stats = self.prepare_targets(targets, img_mask)
 
         cls_embeds, reg_embeds, patch_embeds, visible_mask, visible_ids = self.encoder(
             images, mask=visible_mask, mask_ratio=mask_ratio
@@ -718,6 +727,7 @@ class MaskedAutoencoderViT(nn.Module, PyTorchModelHubMixin):
             visible_mask,
             pred_mask=pred_mask,
             pred_mask_ratio=pred_mask_ratio,
+            pred_edge_pad=pred_edge_pad,
         )
 
         preds = self.forward_decoder(patch_embeds, reg_embeds, visible_ids, pred_ids)
@@ -904,14 +914,3 @@ def mae_vit_small(**kwargs):
 def mae_vit_base(**kwargs):
     model_args = dict(embed_dim=768, depth=12, num_heads=12)
     return _create_mae_vit(**model_args, **kwargs)
-
-
-# "patch embed" baseline model, depth 0 ViT (hah)
-def patch_embed_small(**kwargs):
-    model_args = dict(embed_dim=384, depth=0)
-    return _create_vit(**model_args, **kwargs)
-
-
-def patch_embed_base(**kwargs):
-    model_args = dict(embed_dim=768, depth=0)
-    return _create_vit(**model_args, **kwargs)

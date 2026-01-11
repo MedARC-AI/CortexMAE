@@ -16,6 +16,7 @@ from typing import Iterable, Sequence
 
 import torch
 import torch.nn as nn
+import datasets as hfds
 import wandb
 from omegaconf import DictConfig, OmegaConf
 from PIL import Image
@@ -24,10 +25,11 @@ from torch import Tensor
 from torch.utils.data.distributed import DistributedSampler
 from webdataset import WebLoader
 
-import data.flat_data as flat_data
+import flat_mae.data as flat_data
 import flat_mae.utils as ut
 import flat_mae.models_mae as models_mae
 import flat_mae.masking as masking
+import flat_mae.transforms as transforms
 import flat_mae.visualization as vis
 
 DEFAULT_CONFIG = Path(__file__).parent / "config/default_pretrain.yaml"
@@ -47,6 +49,36 @@ def main(args: DictConfig):
     if args.name and not args.output_dir.endswith(args.name):
         args.output_dir = f"{args.output_dir}/{args.name}"
     output_dir = Path(args.output_dir)
+
+    # override config
+    # historically config has been too general allowing options that actually can't
+    # change. here we override which preserves backward compatibility of the config and
+    # model loading.
+    args.in_chans = 1
+    args.input_space = args.get("input_space", "flat")
+    if args.input_space == "flat":
+        # raster flat maps
+        # patch size is flexible, since these are images
+        args.img_size = (224, 560)
+    elif args.input_space == "schaefer400":
+        # schaefer400 parcellation. parcellated activity vectors are thought of as
+        # "images" of shape (H, W) = (n_rois, 1). patch size is fixed to 1, since roi
+        # order is (somewhat) arbitrary. but you still have the temporal patch size.
+        args.img_size = (400, 1)
+        args.patch_size = 1
+    elif args.input_space == "mni_cortex":
+        # the mni cortex models have a nuanced structure. the pipeline is:
+        # 1. mask the input mni152 2mm (fsl) volume by the schaefer cortex mask
+        # 2. pad dims to be divisible by 8
+        # 3. patchify with 8 x 8 x 8 patches
+        # 4. drop patches not containing enough cortex voxels
+        # 5. rearrange "(d p) (h p) (w p) -> (d h w) (p p p)"
+        # this results in 383 valid cube patches of dim 8 x 8 x 8 = 512
+        # patch size is therefore fixed.
+        args.img_size = (383, 512)
+        args.patch_size = (1, 512)
+    else:
+        raise ValueError(f"input space {args.input_space} not implemented")
 
     if is_master:
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -190,14 +222,44 @@ def main(args: DictConfig):
 
 
 def create_data_loaders(args: DictConfig):
+    train_transform = transforms.Transform(
+        space=args.input_space,
+        num_frames=args.num_frames,
+        normalize=args.normalize,
+        clip_vmax=args.clip_vmax,
+        tr_scale=args.get("tr_scale"),
+        crop_scale=args.get("crop_scale"),
+        crop_aspect=args.get("crop_aspect"),
+        gray_jitter=args.get("gray_jitter"),
+        gauss_sigma=args.get("gauss_sigma"),
+    )
+    val_transform = transforms.Transform(
+        space=args.input_space,
+        num_frames=args.num_frames,
+        normalize=args.normalize,
+        clip_vmax=args.clip_vmax,
+    )
+    print("train transform:", train_transform, sep="\n")
+    print("val transform:", val_transform, sep="\n")
+
+    # number of frames needed for train transform random tr scaling
+    tr_scale = args.get("tr_scale")
+    if tr_scale:
+        train_num_frames = round(args.num_frames / tr_scale)
+    else:
+        train_num_frames = args.num_frames
+
     # masking generator
     # generate masks during collate, following capi
+    # TODO: why do we need to do this again?
     if args.masking:
+        # decouple mask patch size from model patch size, pixio style
+        mask_patch_size = args.get("mask_patch_size", args.patch_size)
         mask_fn = masking.create_masking(
             args.masking,
             mask_ratio=args.mask_ratio,
             img_size=args.img_size,
-            patch_size=args.patch_size,
+            patch_size=mask_patch_size,
             num_frames=args.num_frames,
             t_patch_size=args.t_patch_size,
             **args.masking_kwargs,
@@ -217,31 +279,29 @@ def create_data_loaders(args: DictConfig):
         dataset_config = args.datasets[dataset_name].copy()
         print(f"loading dataset: {dataset_name}\n\n{OmegaConf.to_yaml(dataset_config)}")
 
-        # apply crop transform both to 'train', as well as any "eval" datasets with
-        # train in the name.
-        random_crop = args.random_crop and (
-            dataset_name == args.train_dataset or "train" in dataset_name
-        )
-
-        transform = flat_data.make_flat_transform(
-            img_size=args.img_size,
-            clip_vmax=args.clip_vmax,
-            normalize=args.normalize,
-            random_crop=random_crop,
-            crop_kwargs=args.crop_kwargs,
-        )
+        # we apply train transform to any dataset with train in the name. (this
+        # is just to visualize the effect of the train transforms)
+        if dataset_name == args.train_dataset or "train" in dataset_name:
+            transform = train_transform
+        else:
+            transform = val_transform
 
         dataset_type = dataset_config.pop("type")
 
-        if dataset_type == "flat-wds":
+        if dataset_type == "wds":
             samples_per_epoch = dataset_config.pop("samples_per_epoch")
-            dataset = flat_data.make_flat_wds_dataset(num_frames=args.num_frames, **dataset_config)
+            dataset = flat_data.make_fmri_wds_dataset(num_frames=train_num_frames, **dataset_config)
             dataset = dataset.map(transform)
             sampler = None
             # the shuffle happens inside the dataset with a buffer.
             shuffle = False
-        elif dataset_type == "flat-clips":
-            dataset = flat_data.FlatClipsDataset(dataset_config.root, transform=transform)
+        elif dataset_type == "arrow":
+            # note, the arrow datasets are pre-clipped. this means the clips have to be
+            # >= num_frames for val and >= train_num_frames for train (including any
+            # "eval" subsets of the training set).
+            url = flat_data.maybe_download(dataset_config.root)
+            dataset = hfds.load_dataset("arrow", data_files=f"{url}/*.arrow")
+            dataset = flat_data.HFDataset(dataset, transform)
             if args.distributed:
                 sampler = DistributedSampler(dataset, shuffle=dataset_config.shuffle)
             else:
@@ -319,7 +379,8 @@ def train_one_epoch(
         if need_update:
             ut.update_lr(optimizer.param_groups, lr)
 
-        images = batch["image"]
+        images = batch["bold"]
+        targets = batch.get("bold_clean")
         img_mask = batch.get("img_mask")
         visible_mask = batch.get("visible_mask")
 
@@ -329,6 +390,7 @@ def train_one_epoch(
         with torch.autocast(device_type=device.type, dtype=amp_dtype, enabled=args.amp):
             loss = model(
                 images,
+                targets=targets,
                 img_mask=img_mask,
                 visible_mask=visible_mask,
                 mask_ratio=mask_ratio,
@@ -404,13 +466,15 @@ def evaluate(
 
         batch_step = batch_idx + 1
 
-        images = batch["image"]
+        images = batch["bold"]
+        targets = batch.get("bold_clean")
         img_mask = batch.get("img_mask")
         visible_mask = batch.get("visible_mask")
 
         with torch.autocast(device_type=device.type, dtype=amp_dtype, enabled=args.amp):
             loss, state = model(
                 images,
+                targets=targets,
                 mask_ratio=args.mask_ratio,
                 pred_mask_ratio=args.pred_mask_ratio,
                 img_mask=img_mask,
@@ -451,9 +515,16 @@ def make_plots(
     batch: dict[str, Tensor],
     state: dict[str, Tensor],
 ) -> dict[str, Image.Image]:
+    if args.input_space != "flat":
+        # TODO: implement plots for other spaces
+        #   - schaefer400: parcel -> flat maps
+        #   - mni: patches -> volume -> surface (neuromaps) -> flat maps
+        print("plots only implemented for flat maps")
+        return {}
+
     fig_kwargs = args.get("fig_kwargs", {})
 
-    images = batch["image"]
+    images = batch["bold"]
     img_mask = batch.get("img_mask")
     if img_mask is not None:
         img_mask = img_mask.expand_as(images)

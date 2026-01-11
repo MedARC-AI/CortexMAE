@@ -103,7 +103,7 @@ def mask_collate(
     dimensions for batching.
     """
     for sample in samples:
-        image = sample["image"]
+        image = sample["bold"]
         img_mask = sample.get("img_mask")
         if mask_fn is not None:
             visible_mask = mask_fn(img_mask)
