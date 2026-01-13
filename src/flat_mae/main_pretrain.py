@@ -34,6 +34,9 @@ import flat_mae.masking as masking
 import flat_mae.transforms as transforms
 import flat_mae.visualization as vis
 
+# quiet noisy hf progress bars when downloading data
+hfds.disable_progress_bars()
+
 DEFAULT_CONFIG = Path(__file__).parent / "config/default_pretrain.yaml"
 
 MODELS_DICT = models_mae.__dict__
@@ -75,9 +78,9 @@ def main(args: DictConfig):
         # 3. patchify with 8 x 8 x 8 patches
         # 4. drop patches not containing enough cortex voxels
         # 5. rearrange "(d p) (h p) (w p) -> (d h w) (p p p)"
-        # this results in 383 valid cube patches of dim 8 x 8 x 8 = 512
+        # this results in 466 valid cube patches of dim 8 x 8 x 8 = 512
         # patch size is therefore fixed.
-        args.img_size = (383, 512)
+        args.img_size = (466, 512)
         args.patch_size = (1, 512)
     else:
         raise ValueError(f"input space {args.input_space} not implemented")
@@ -302,7 +305,12 @@ def create_data_loaders(args: DictConfig):
             # >= num_frames for val and >= train_num_frames for train (including any
             # "eval" subsets of the training set).
             dataset = hfds.load_dataset(
-                "arrow", data_files=f"{dataset_config.root}/*.arrow", split="train"
+                "arrow",
+                data_files=f"{dataset_config.root}/*.arrow",
+                split="train",
+                download_config=hfds.DownloadConfig(
+                    num_proc=min(args.num_workers, 8)
+                ),  # parallelize download
             )
             dataset = flat_data.HFDataset(dataset, transform)
 
@@ -397,9 +405,10 @@ def train_one_epoch(
         if need_update:
             ut.update_lr(optimizer.param_groups, lr)
 
-        images = batch["bold"]
+        images = batch["bold"]  # note, this key changed "image" -> "bold"
+
+        img_mask = batch["mask"]  # note, this key changed "img_mask" -> "mask"
         targets = batch.get("bold_clean")
-        img_mask = batch.get("img_mask")
         visible_mask = batch.get("visible_mask")
 
         # visible mask overrides default random masking
@@ -477,7 +486,7 @@ def evaluate(
     amp_dtype = getattr(torch, args.amp_dtype)
 
     for batch_idx, batch in enumerate(
-        metric_logger.log_every(data_loader, print_freq, header, total_steps=epoch_num_batches)
+        metric_logger.log_every(data_loader, print_freq, header, total_steps=num_batches)
     ):
         if use_cuda and not args.presend_cuda:
             batch = ut.send_data(batch, device)
@@ -485,8 +494,8 @@ def evaluate(
         batch_step = batch_idx + 1
 
         images = batch["bold"]
+        img_mask = batch["mask"]
         targets = batch.get("bold_clean")
-        img_mask = batch.get("img_mask")
         visible_mask = batch.get("visible_mask")
 
         with torch.autocast(device_type=device.type, dtype=amp_dtype, enabled=args.amp):
@@ -533,29 +542,32 @@ def make_plots(
     batch: dict[str, Tensor],
     state: dict[str, Tensor],
 ) -> dict[str, Image.Image]:
-    if args.input_space != "flat":
-        # TODO: implement plots for other spaces
-        #   - schaefer400: parcel -> flat maps
-        #   - mni: patches -> volume -> surface (neuromaps) -> flat maps
-        print("plots only implemented for flat maps")
-        return {}
+    # unmasking transform has a to_flat method that we use for consistent visualization
+    # nb this returns a cached transform, doesn't create a new one every time
+    unmask = transforms.get_unmask(args.input_space)
+
+    plot_state = {
+        "target": batch["bold"],
+        "img_mask": batch["mask"],
+        "pred": state["pred_images"],
+        "visible_mask": state["visible_mask"],
+        "pred_mask": state["pred_mask"],
+    }
+    for key, values in plot_state.items():
+        if values is not None:
+            # only get first sample from batch, saves transform time
+            values = values[:1]
+            values = unmask.to_flat(values)
+            plot_state[key] = values
+
+    # hack, input mask might still be unexpanded. other masks are fine though.
+    plot_state["img_mask"] = plot_state["img_mask"].expand_as(plot_state["target"])
 
     fig_kwargs = args.get("fig_kwargs", {})
-
-    images = batch["bold"]
-    img_mask = batch.get("img_mask")
-    if img_mask is not None:
-        img_mask = img_mask.expand_as(images)
+    fig_kwargs = ut.filter_kwargs(vis.plot_mask_pred, fig_kwargs)
 
     plots = {}
-    mask_pred_fig = vis.plot_mask_pred(
-        target=images,
-        pred=state["pred_images"],
-        visible_mask=state["visible_mask"],
-        pred_mask=state["pred_mask"],
-        img_mask=img_mask,
-        **ut.filter_kwargs(vis.plot_mask_pred, fig_kwargs),
-    )
+    mask_pred_fig = vis.plot_mask_pred(**plot_state, **fig_kwargs)
     plots["mask_pred"] = vis.fig2pil(mask_pred_fig)
     plt.close(mask_pred_fig)
 

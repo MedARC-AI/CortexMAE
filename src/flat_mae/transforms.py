@@ -1,4 +1,5 @@
 import random
+from functools import cache
 from typing import Literal
 
 import torch
@@ -120,6 +121,10 @@ class FlatUnmask:
         mask = self.mask
         return {**sample, "bold": bold, "mask": mask}
 
+    def to_flat(self, bold: torch.Tensor) -> torch.Tensor:
+        # just for consistency
+        return bold
+
     def __repr__(self):
         return f"{self.__class__.__name__}({tuple(self.mask.shape)})"
 
@@ -169,7 +174,7 @@ class MNICortexUnmask:
 
     dim = 132032
 
-    def __init__(self, patch_size: int = 8, threshold: float = 0.25):
+    def __init__(self, patch_size: int = 8, threshold: float = 0.10):
         self.patch_size = patch_size
         self.threshold = threshold
 
@@ -230,8 +235,13 @@ class MNICortexUnmask:
         bold_[:, self.mask] = bold
         bold = bold_
         # volume [Z, Y, X] -> surface [V] with neuromaps
-        bold_img = nib.Nifti1Image(bold.numpy().T, affine=self.mask_img.affine)
-        bold_lh, bold_rh = neuromaps.transforms.mni152_to_fslr(bold_img)
+        # nifti doesn't support bool
+        bold = bold.numpy().T  # [Z, Y, X] -> [X, Y, Z] F order
+        is_bool = np.issubdtype(bold.dtype, np.bool_)
+        if is_bool:
+            bold = bold.astype(np.float32)
+        bold_img = nib.Nifti1Image(bold, affine=self.mask_img.affine)
+        bold_lh, bold_rh = neuromaps.transforms.mni152_to_fslr(bold_img, method="nearest")
         bold = np.stack(
             [
                 np.concatenate([row_lh.data, row_rh.data])
@@ -240,6 +250,8 @@ class MNICortexUnmask:
         )
         # surface [V] -> flat [H, W]
         bold = _FLAT_RESAMPLER.transform(bold, interpolation="nearest")
+        if is_bool:
+            bold = bold > 0
         _, H, W = bold.shape
         bold = bold.reshape((*shape, H, W))
         bold = torch.as_tensor(bold)
@@ -416,12 +428,8 @@ class Transform:
         if clip_vmax and clip_vmax > 0:
             transforms.append(Clip(clip_vmax))
 
-        unmask_cls = {
-            "flat": FlatUnmask,
-            "schaefer400": Schaefer400Unmask,
-            "mni_cortex": MNICortexUnmask,
-        }[space]
-        transforms.append(unmask_cls())
+        unmask = get_unmask(space)
+        transforms.append(unmask)
 
         if crop_scale and crop_scale < 1:
             transforms.append(FlatRandomResizedCrop(crop_scale, crop_aspect or 1.0))
@@ -453,3 +461,20 @@ class Transform:
         s = f"transform={self.transform},\nnoise_transform={self.noise_transform}"
         s = f"{c}(\n{s}\n)"
         return s
+
+
+@cache
+def get_unmask(space: Literal["flat", "schaefer400", "mni_cortex"] = "flat"):
+    """
+    return singleton unmask fn.
+
+    (not sure if this is the best way to do this but ok. I just need access to the
+    `to_flat` function in some places.)
+    """
+    unmask_cls = {
+        "flat": FlatUnmask,
+        "schaefer400": Schaefer400Unmask,
+        "mni_cortex": MNICortexUnmask,
+    }[space]
+    unmask = unmask_cls()
+    return unmask

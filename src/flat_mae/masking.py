@@ -104,12 +104,12 @@ def mask_collate(
     """
     for sample in samples:
         image = sample["bold"]
-        img_mask = sample.get("img_mask")
+        img_mask = sample.get("mask")
         if mask_fn is not None:
             visible_mask = mask_fn(img_mask)
             sample["visible_mask"] = _unsqueeze_as(visible_mask, image)
         if img_mask is not None:
-            sample["img_mask"] = _unsqueeze_as(img_mask, image)
+            sample["mask"] = _unsqueeze_as(img_mask, image)
     batch = default_collate(samples)
     return batch
 

@@ -118,7 +118,11 @@ datasets:
 
   hcp-train-subset:
     type: arrow
-    root: s3://medarc/fmri-datasets/eval/hcpya-clips.${input_space}.arrow/train
+    # note choice of validation split here and test below. this is confusing but not a mistake.
+    # validation includes batches [16, 17] which are part of training set, while test
+    # includes [18, 19] which are not. (note also, batches are [0, ..., 19]). we keep
+    # the names here as train-subset and val for consistency with earlier runs.
+    root: s3://medarc/fmri-datasets/eval/hcpya-clips.${input_space}.arrow/validation
     split_range: [0, 2000]
     shuffle: false
 
