@@ -333,7 +333,7 @@ def load_flat(
 def maybe_download_subject(subject: str):
     """Download pycortex subject."""
     id_to_url = {
-        "32k_fs_LR": "https://figshare.com/ndownloader/files/58130806",
+        "32k_fs_LR": "https://raw.githubusercontent.com/MedARC-AI/fmri-fm-eval/refs/heads/main/resources/32k_fs_LR.tar.gz",
     }
 
     # filestore isn't created automatically
