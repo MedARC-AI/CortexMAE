@@ -901,13 +901,13 @@ dependencies = [
     { name = "cloudpathlib", extra = ["s3"] },
     { name = "datasets" },
     { name = "einops" },
-    { name = "fmri-fm-eval" },
     { name = "huggingface-hub" },
     { name = "ipython" },
     { name = "jaxtyping" },
     { name = "jupyter" },
     { name = "lightning-sdk" },
     { name = "matplotlib" },
+    { name = "neuromaps" },
     { name = "nibabel" },
     { name = "nsdcode" },
     { name = "numpy" },
@@ -925,18 +925,24 @@ dependencies = [
     { name = "webdataset" },
 ]
 
+[package.optional-dependencies]
+eval = [
+    { name = "fmri-fm-eval" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "cloudpathlib", extras = ["s3"] },
     { name = "datasets" },
     { name = "einops" },
-    { name = "fmri-fm-eval", git = "https://github.com/MedARC-AI/fmri-fm-eval.git" },
+    { name = "fmri-fm-eval", marker = "extra == 'eval'", git = "https://github.com/MedARC-AI/fmri-fm-eval.git" },
     { name = "huggingface-hub" },
     { name = "ipython" },
     { name = "jaxtyping" },
     { name = "jupyter" },
     { name = "lightning-sdk" },
     { name = "matplotlib" },
+    { name = "neuromaps" },
     { name = "nibabel" },
     { name = "nsdcode", git = "https://github.com/cvnlab/nsdcode.git?rev=bfd36a503cc90a3eb3ebfd69b269403f7e186924" },
     { name = "numpy" },
@@ -953,6 +959,7 @@ requires-dist = [
     { name = "wandb" },
     { name = "webdataset" },
 ]
+provides-extras = ["eval"]
 
 [[package]]
 name = "fmri-fm-eval"
