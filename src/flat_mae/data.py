@@ -98,15 +98,11 @@ def maybe_download(url: str, cache_dir: str | Path | None = None) -> str:
     # NOTE: previously we also downloaded hf urls, but we can delegate this to hf
     # load_dataset itself.
     if parsed.scheme == "s3":
-        path = Path(parsed.path)
-        local_path = str(Path(cache_dir) / path.name)
+        local_path = str(Path(cache_dir) / parsed.path.removeprefix("/"))
         print(f"downloading {url} -> {local_path}")
         # TODO: is this the best way to download from s3?
         # it's faster at least than letting hf download
-        subprocess.run(
-            ["aws", "s3", "sync", "--quiet", str(path), str(local_path)],
-            check=True,
-        )
+        subprocess.run(["aws", "s3", "sync", "--quiet", str(url), str(local_path)], check=True)
     else:
         local_path = url
     return local_path

@@ -17,11 +17,13 @@ from typing import Iterable, Sequence
 import torch
 import torch.nn as nn
 import datasets as hfds
+import numpy as np
 import wandb
 from omegaconf import DictConfig, OmegaConf
 from PIL import Image
 from matplotlib import pyplot as plt
 from torch import Tensor
+from torch.utils.data import Subset
 from torch.utils.data.distributed import DistributedSampler
 from webdataset import WebLoader
 
@@ -100,7 +102,7 @@ def main(args: DictConfig):
 
     ut.setup_for_distributed(log_path=output_dir / "log.txt")
 
-    print("pretraining flat map mae")
+    print("pretraining fmri mae")
     print(f"start: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"cwd: {Path.cwd()}")
     print(ut.get_sha())
@@ -299,9 +301,25 @@ def create_data_loaders(args: DictConfig):
             # note, the arrow datasets are pre-clipped. this means the clips have to be
             # >= num_frames for val and >= train_num_frames for train (including any
             # "eval" subsets of the training set).
-            url = flat_data.maybe_download(dataset_config.root)
-            dataset = hfds.load_dataset("arrow", data_files=f"{url}/*.arrow")
+            dataset = hfds.load_dataset(
+                "arrow", data_files=f"{dataset_config.root}/*.arrow", split="train"
+            )
             dataset = flat_data.HFDataset(dataset, transform)
+
+            # subset split
+            split_range = dataset_config.get("split_range")
+            if split_range is not None:
+                split_start, split_stop = split_range
+                if isinstance(split_stop, float):
+                    split_start = int(split_start * len(dataset))
+                    split_stop = int(split_stop * len(dataset))
+                shuffle_seed = dataset_config.get("shuffle_seed", 42)
+                rng = np.random.default_rng(shuffle_seed)
+                sample_order = rng.permutation(len(dataset))
+                split_indices = sample_order[split_start:split_stop]
+                print(f"split indices: {split_indices[:10].tolist()}")
+                dataset = Subset(dataset, split_indices)
+
             if args.distributed:
                 sampler = DistributedSampler(dataset, shuffle=dataset_config.shuffle)
             else:

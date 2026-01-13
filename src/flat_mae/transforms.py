@@ -39,7 +39,7 @@ class Normalize:
         return {**sample, "bold": bold}
 
     def __repr__(self):
-        return f"{self.__class__.__name__}(mode={self.mode})"
+        return f"{self.__class__.__name__}(mode='{self.mode}')"
 
 
 class TemporalRandomResizedCrop:
@@ -122,15 +122,19 @@ class FlatUnmask:
 
 
 class ParcelUnmask:
+    def __init__(self, dim: int):
+        self.dim = dim
+
     def __call__(self, sample: dict) -> dict:
         bold = sample["bold"]
         T, D = bold.shape
+        assert D == self.dim, f"input dim {D} doesn't match expected {self.dim}"
         bold = bold[None, :, :, None]  # [1, T, D, 1]
         mask = torch.ones(D, 1, dtype=torch.bool)  # [D, 1] spatial mask only
         return {**sample, "bold": bold, "mask": mask}
 
     def __repr__(self):
-        return f"{self.__class__.__name__}()"
+        return f"{self.__class__.__name__}({self.dim})"
 
 
 class MNICortexUnmask:
@@ -236,7 +240,7 @@ class FlatRandomResizedCrop:
         self,
         crop_scale: float = 0.8,
         crop_aspect: float = 1.0,
-        **kwargs,
+        interpolation: v2.InterpolationMode = v2.InterpolationMode.BICUBIC,
     ):
         assert 0 < crop_scale < 1.0, f"invalid {crop_scale=}"
         assert 0 < crop_aspect <= 1.0, f"invalid {crop_aspect=}"
@@ -253,7 +257,7 @@ class FlatRandomResizedCrop:
             size=self.img_size,
             scale=scale,
             ratio=ratio,
-            **kwargs,
+            interpolation=interpolation,
         )
 
     def __call__(self, sample):
@@ -301,7 +305,7 @@ class GrayJitter:
             bold = bold * brightness_factor
         if self.contrast is not None:
             contrast_factor = random.uniform(1 - self.contrast, 1 + self.contrast)
-            mean = bold.sum() / mask.expand_as(bold).sum()
+            mean = (mask * bold).sum() / mask.expand_as(bold).sum()
             bold = (bold - mean) * contrast_factor + mean
             bold = bold * mask
 
@@ -319,11 +323,9 @@ class GaussianJitter:
     def __call__(self, sample):
         bold = sample["bold"]
         mask = sample["mask"]
-
         if self.std > 0:
             bold = bold + self.std * torch.randn_like(bold)
             bold = bold * mask
-
         return {**sample, "bold": bold}
 
     def __repr__(self):
@@ -392,6 +394,6 @@ class Transform:
 
     def __repr__(self):
         c = self.__class__.__name__
-        s = f"    transform={self.transform},\n    noise_transform={self.noise_transform}"
+        s = f"transform={self.transform},\nnoise_transform={self.noise_transform}"
         s = f"{c}(\n{s}\n)"
         return s
