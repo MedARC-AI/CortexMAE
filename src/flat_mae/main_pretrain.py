@@ -546,12 +546,14 @@ def make_plots(
     # nb this returns a cached transform, doesn't create a new one every time
     unmask = transforms.get_unmask(args.input_space)
 
+    # nb, we omit the pred_mask so we can visualize the full prediction, not just what
+    # contributes to the loss. this is mostly for when pred_edge_pad > 0, so we can
+    # still see the edge prediction.
     plot_state = {
         "target": batch["bold"],
         "img_mask": batch["mask"],
         "pred": state["pred_images"],
         "visible_mask": state["visible_mask"],
-        "pred_mask": state["pred_mask"],
     }
     for key, values in plot_state.items():
         if values is not None:

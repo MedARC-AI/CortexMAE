@@ -291,6 +291,8 @@ class MaskedDecoder(nn.Module):
         self.cls_token = nn.Parameter(torch.empty(1, 1, embed_dim)) if class_token else None
         if not no_embed_class:
             self.cls_token_pos = nn.Parameter(torch.empty(1, 1, embed_dim)) if class_token else None
+        else:
+            self.cls_token_pos = None
 
         self.mask_token = nn.Parameter(torch.empty(1, 1, embed_dim))
 

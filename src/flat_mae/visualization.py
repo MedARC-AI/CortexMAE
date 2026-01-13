@@ -38,7 +38,7 @@ def plot_mask_pred(
     target: Tensor,
     pred: Tensor,
     visible_mask: Tensor,
-    pred_mask: Tensor | None,
+    pred_mask: Tensor | None = None,
     img_mask: Tensor | None = None,
     paste_visible: bool = True,
     stride: int = 2,
