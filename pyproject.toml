@@ -47,7 +47,7 @@ eval = [
 version_file = "src/_version.py"
 
 [tool.uv.sources]
-fmri-fm-eval = { git = "https://github.com/MedARC-AI/fmri-fm-eval.git" }
+fmri-fm-eval = { git = "https://github.com/MedARC-AI/fmri-fm-eval.git", rev = "610a9165abea884d9491401d4da0ad04ced8bdcf" }
 nsdcode = { git = "https://github.com/cvnlab/nsdcode.git", rev = "bfd36a503cc90a3eb3ebfd69b269403f7e186924" }
 
 [tool.ruff]

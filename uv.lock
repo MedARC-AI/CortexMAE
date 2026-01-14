@@ -936,7 +936,7 @@ requires-dist = [
     { name = "cloudpathlib", extras = ["s3"] },
     { name = "datasets" },
     { name = "einops" },
-    { name = "fmri-fm-eval", marker = "extra == 'eval'", git = "https://github.com/MedARC-AI/fmri-fm-eval.git" },
+    { name = "fmri-fm-eval", marker = "extra == 'eval'", git = "https://github.com/MedARC-AI/fmri-fm-eval.git?rev=610a9165abea884d9491401d4da0ad04ced8bdcf" },
     { name = "huggingface-hub" },
     { name = "ipython" },
     { name = "jaxtyping" },
@@ -965,8 +965,8 @@ provides-extras = ["eval"]
 
 [[package]]
 name = "fmri-fm-eval"
-version = "0.1.dev31+gc4871214b"
-source = { git = "https://github.com/MedARC-AI/fmri-fm-eval.git#c4871214b8d7e996e0dd4929eabbdc278d3565ca" }
+version = "0.1.dev36+g610a9165a"
+source = { git = "https://github.com/MedARC-AI/fmri-fm-eval.git?rev=610a9165abea884d9491401d4da0ad04ced8bdcf#610a9165abea884d9491401d4da0ad04ced8bdcf" }
 dependencies = [
     { name = "cloudpathlib", extra = ["s3"] },
     { name = "datasets" },
