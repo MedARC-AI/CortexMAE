@@ -28,6 +28,7 @@ checkpoints
 wandb
 jobs
 output
+slurm-*
 
 # Local scratch/tmp
 .scratch
