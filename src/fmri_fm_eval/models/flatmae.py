@@ -6,14 +6,11 @@ import torch.nn.functional as F
 from torch import Tensor
 from einops import rearrange
 
-import fmri_fm_eval.nisc as nisc
 from fmri_fm_eval.models.base import Embeddings
 from fmri_fm_eval.models.registry import register_model
 
 import flat_mae.models_mae as models_mae
-
-# static flat map mask
-_resampler = nisc.flat_resampler_fslr64k_224_560()
+import flat_mae.transforms as flat_transforms
 
 
 class MaskedEncoderWrapper(nn.Module):
@@ -67,11 +64,10 @@ class MaskedEncoderWrapper(nn.Module):
         return cls_embeds, reg_embeds, patch_embeds
 
 
-class FlatTransform:
-    mask: Tensor
-
+class Transform:
     def __init__(
         self,
+        space: Literal["schaefer400", "flat", "mni_cortex"] = "flat",
         norm: Literal["frame", "global"] | None = "frame",
         clip_vmax: float | None = 3.0,
     ):
@@ -79,7 +75,7 @@ class FlatTransform:
         self.norm = norm
         self.clip_vmax = clip_vmax
         self.target_tr = 1.0
-        self.mask = torch.tensor(_resampler.mask_)
+        self.unmask = flat_transforms.get_unmask(space)
 
     def __call__(self, sample: dict[str, Tensor]) -> dict[str, Tensor]:
         bold = sample["bold"]
@@ -102,17 +98,11 @@ class FlatTransform:
             bold = torch.clamp(bold, min=-self.clip_vmax, max=self.clip_vmax)
 
         # unmask masked input
-        T, D = bold.shape
-        H, W = self.mask.shape
-        bold_ = torch.zeros((T, H, W), dtype=bold.dtype)
-        bold_[:, self.mask] = bold
+        sample["bold"] = bold
+        sample = self.unmask(sample)
 
-        # add channel dim
-        bold_ = bold_.unsqueeze(0)  # [C, T, H, W]
         # expand mask to sampe shape as input for correct collation
-        mask = self.mask.expand_as(bold_)
-
-        sample = {**sample, "bold": bold_, "mask": mask}
+        sample["mask"] = sample["mask"].expand_as(sample["bold"])
         return sample
 
 
@@ -139,23 +129,42 @@ def resample_to_tr(x: Tensor, tr: float, target_tr: float, mode: str = "linear")
 
 
 @register_model
-def flat_mae_base_patch16_16(**kwargs) -> tuple[FlatTransform, MaskedEncoderWrapper]:
-    transform = FlatTransform()
+def flat_mae_base_patch16_16(**kwargs) -> tuple[Transform, MaskedEncoderWrapper]:
+    transform = Transform()
     model = models_mae.MaskedAutoencoderViT.from_pretrained("medarc/fm_mae_vit_base_patch16-16.hcp")
     model = MaskedEncoderWrapper(model.encoder)
     return transform, model
 
 
 @register_model
-def flat_mae_base_patch16_2(**kwargs) -> tuple[FlatTransform, MaskedEncoderWrapper]:
-    transform = FlatTransform()
+def flat_mae_base_patch16_2(**kwargs) -> tuple[Transform, MaskedEncoderWrapper]:
+    transform = Transform()
     model = models_mae.MaskedAutoencoderViT.from_pretrained("medarc/fm_mae_vit_base_patch16-2.hcp")
     model = MaskedEncoderWrapper(model.encoder)
     return transform, model
 
 
 @register_model
-def flat_mae(*, ckpt_path: str, **kwargs) -> tuple[FlatTransform, MaskedEncoderWrapper]:
-    transform = FlatTransform()
+def flat_mae(*, ckpt_path: str, **kwargs) -> tuple[Transform, MaskedEncoderWrapper]:
+    transform = Transform()
     model = models_mae.MaskedAutoencoderViT.from_checkpoint(ckpt_path, **kwargs)
+    model = MaskedEncoderWrapper(model.encoder)
+    return transform, model
+
+
+@register_model
+def schaefer400_mae(*, ckpt_path: str, **kwargs) -> tuple[Transform, MaskedEncoderWrapper]:
+    transform = Transform(space="schaefer400")
+    model = models_mae.MaskedAutoencoderViT.from_checkpoint(ckpt_path, **kwargs)
+    model = MaskedEncoderWrapper(model.encoder)
+    model.__space__ = "schaefer400"
+    return transform, model
+
+
+@register_model
+def mni_cortex_mae(*, ckpt_path: str, **kwargs) -> tuple[Transform, MaskedEncoderWrapper]:
+    transform = Transform(space="schaefer400")
+    model = models_mae.MaskedAutoencoderViT.from_checkpoint(ckpt_path, **kwargs)
+    model = MaskedEncoderWrapper(model.encoder)
+    model.__space__ = "mni_cortex"
     return transform, model

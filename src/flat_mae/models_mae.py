@@ -780,7 +780,7 @@ class MaskedAutoencoderViT(nn.Module, PyTorchModelHubMixin):
         }
         model_kwargs.update(args["model_kwargs"] or {})
         model_kwargs.update(kwargs)
-        model_fn = locals()[args["model"]]
+        model_fn = globals()[args["model"]]
         model = model_fn(**model_kwargs)
         model.load_state_dict(ckpt["model"])
         return model
