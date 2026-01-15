@@ -392,7 +392,8 @@ class GaussianJitter:
         bold = sample["bold"]
         mask = sample["mask"]
         if self.std > 0:
-            bold = bold + self.std * torch.randn_like(bold)
+            std = random.uniform(0, self.std)
+            bold = bold + std * torch.randn_like(bold)
             bold = bold * mask
         return {**sample, "bold": bold}
 
