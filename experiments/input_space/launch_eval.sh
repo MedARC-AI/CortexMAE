@@ -8,7 +8,7 @@
 #SBATCH --output=slurms/slurm-%A_%a.out
 # #SBATCH --nodelist=n-4
 #SBATCH --account=training
-#SBATCH --array=0,1,2
+#SBATCH --array=3-5
 
 set -euo pipefail
 
@@ -30,6 +30,9 @@ configs=(
     schaefer400/cls/linear
     schaefer400/patch/linear
     schaefer400/patch/attn
+    flat/cls/linear
+    flat/patch/linear
+    flat/patch/attn
 )
 config=${configs[SLURM_ARRAY_TASK_ID]}
 space=$(echo $config | cut -d / -f 1)
