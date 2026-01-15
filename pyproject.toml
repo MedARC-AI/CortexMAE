@@ -11,7 +11,6 @@ requires-python = ">=3.11"
 dependencies = [
     "datasets",
     "einops",
-    "fmri-fm-eval",
     "huggingface_hub",
     "ipython",
     "jaxtyping",
@@ -34,6 +33,12 @@ dependencies = [
     "webdataset",
     "cloudpathlib[s3]",
     "lightning-sdk",
+]
+
+[project.optional-dependencies]
+
+eval = [
+    "fmri-fm-eval"
 ]
 
 [tool.setuptools_scm]
