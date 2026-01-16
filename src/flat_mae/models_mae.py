@@ -218,12 +218,8 @@ class MaskedEncoder(nn.Module):
 
         if mask is not None or mask_ratio is not None:
             # trim mask to get equal number of visible patches per sample in batch.
-            # patches sampled randomly if mask_ratio is not None, and otherwise in raster
-            # grid order. (nb as a hack you can set mask_ratio=0.0 to get random instead of
-            # trailing trim.)
-            patch_mask, mask_ids = trim_patch_mask(
-                patch_mask, mask_ratio=mask_ratio, shuffle=mask_ratio is not None
-            )
+            # shuffle patch order to choose random patches
+            patch_mask, mask_ids = trim_patch_mask(patch_mask, mask_ratio=mask_ratio, shuffle=True)
             mask_patches = mask_patches * patch_mask.unsqueeze(-1)
             # nb, unnecessary computation for convenience
             mask = self.patchify.unpatchify(mask_patches)
@@ -635,9 +631,10 @@ class MaskedAutoencoderViT(nn.Module, PyTorchModelHubMixin):
         pred_mask_patches = self.pred_patchify(pred_mask)  # [B, N, P]
 
         # trim prediction patches
+        # shuffle patch order to choose random patches
         pred_patch_mask = pred_mask_patches.any(dim=-1).to(pred_mask.dtype)
         pred_patch_mask, pred_ids = trim_patch_mask(
-            pred_patch_mask, mask_ratio=pred_mask_ratio, shuffle=pred_mask_ratio is not None
+            pred_patch_mask, mask_ratio=pred_mask_ratio, shuffle=True
         )
         pred_mask_patches = pred_mask_patches * pred_patch_mask.unsqueeze(-1)
         B, Q = pred_ids.shape
