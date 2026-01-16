@@ -8,7 +8,7 @@
 #SBATCH --output=slurms/slurm-%A_%a.out
 #SBATCH --nodelist=n-2,n-3,n-4
 #SBATCH --account=training
-#SBATCH --array=0-4
+#SBATCH --array=1-2
 
 set -euo pipefail
 
@@ -38,7 +38,7 @@ overrides=$(echo $config | cut -d '|' -f 2)
 
 base_config="${EXP_DIR}/pretrain.yaml"
 fullname="${EXP_NAME}/${name}/pretrain"
-notes="augmentation ablations $name (${overrides})"
+notes="augmentation ablations $name; retry after crop fix (${overrides})"
 
 # add small delay between jobs
 # bit of hack to try to get wandb to assign different colors

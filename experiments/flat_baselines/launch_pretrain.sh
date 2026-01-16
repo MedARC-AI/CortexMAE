@@ -6,7 +6,7 @@
 #SBATCH --time=infinite
 #SBATCH --partition=main
 #SBATCH --output=slurms/slurm-%A_%a.out
-# #SBATCH --nodelist=n-4
+#SBATCH --nodelist=n-2,n-3,n-4
 #SBATCH --account=training
 #SBATCH --array=0-11
 
@@ -42,13 +42,15 @@ configs=(
 config=${configs[SLURM_ARRAY_TASK_ID]}
 name=$(echo $config | cut -d '|' -f 1)
 overrides=$(echo $config | cut -d '|' -f 2)
+# allow resuming with config change (I added plot_period)
+overrides="${overrides} unsafe_resume=true"
 
 fullname="${EXP_NAME}/${name}/pretrain"
 notes="misc flat baseline ablations $name (${overrides})"
 
 # add small delay between jobs
 # bit of hack to try to get wandb to assign different colors
-sleep $(( SLURM_ARRAY_TASK_ID * 10 ))
+# sleep $(( SLURM_ARRAY_TASK_ID * 10 ))
 
 uv run torchrun --standalone --nproc_per_node=1 \
     src/flat_mae/main_pretrain.py \
