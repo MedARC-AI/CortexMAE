@@ -90,10 +90,11 @@ def main(args: DictConfig):
         out_cfg_path = output_dir / "config.yaml"
         if out_cfg_path.exists():
             prev_cfg = OmegaConf.load(out_cfg_path)
-            if args != prev_cfg and not args.get("unsafe_resume"):
-                raise ValueError("current config doesn't match previous config")
-            suffix = len(list(output_dir.glob("config.yaml.*")))
-            OmegaConf.save(prev_cfg, output_dir / f"config.yaml.{suffix}")
+            if args != prev_cfg:
+                if not args.get("unsafe_resume"):
+                    raise ValueError("current config doesn't match previous config")
+                suffix = len(list(output_dir.glob("config.yaml.*")))
+                OmegaConf.save(prev_cfg, output_dir / f"config.yaml.{suffix}")
         OmegaConf.save(args, out_cfg_path)
 
         if args.wandb:
