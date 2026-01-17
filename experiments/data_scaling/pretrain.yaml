@@ -1,0 +1,49 @@
+# intermediate temporal patch size
+t_patch_size: 4
+
+masking: tube
+
+model_kwargs:
+  no_decode_pos: true
+  no_embed_class: true
+  head_init_scale: 0.0
+
+datasets:
+  hcp-train:
+    # we will override this with different slices of shards
+    url: /data/fmri-datasets/pretrain/hcpya-all.${input_space}.wds/hcpya-all-${input_space}-{00000..01799}.tar
+    buffer_size: 2000
+
+  hcp-train-subset:
+    # note that other runs used the validation split with batches 16, 17. this is not
+    # actually *in* the training data for any of these runs though, so can't use.
+    type: arrow
+    root: s3://medarc/fmri-datasets/eval/hcpya-clips.${input_space}.arrow/train
+    split_range: [0, 2000]
+    shuffle: false
+
+  hcp-val:
+    type: arrow
+    root: s3://medarc/fmri-datasets/eval/hcpya-clips.${input_space}.arrow/test
+    split_range: [0, 2000]
+    shuffle: false
+
+  nsd-val:
+    type: arrow
+    root: s3://medarc/fmri-datasets/eval/nsd-cococlip.${input_space}.arrow/testid
+    split_range: [0, 2000]
+    shuffle: false
+
+# which datasets to include
+train_dataset: hcp-train
+eval_datasets:
+  - hcp-train-subset
+  - hcp-val
+  - nsd-val
+# dataset to use for saving the best checkpoint
+# if null, then no best checkpoints are saved
+val_dataset: hcp-val
+
+max_checkpoints: 20
+checkpoint_period: 5
+plot_period: 5
