@@ -1,0 +1,4 @@
+include src/flat_mae/resources/*
+prune experiments
+prune notebooks
+prune .github

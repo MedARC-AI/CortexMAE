@@ -553,7 +553,6 @@ def masked_normalize(
     num_obs = mask.sum(dim=dim, keepdim=True).clamp(min=1)
     mean = (mask * x).sum(dim=dim, keepdim=True) / num_obs
     var = (mask * (x - mean) ** 2).sum(dim=dim, keepdim=True) / num_obs
-    # TODO: why did I add eps to var and not std (after sqrt)?
     std = (var + eps) ** 0.5
     x = mask * (x - mean) / std
     return x, mean, std
@@ -569,6 +568,52 @@ def normalize(
     std = (var + eps) ** 0.5
     x = (x - mean) / std
     return x, mean, std
+
+
+class PCANormalize(nn.Module):
+    """
+    a normalization module that residualizes the input wrt a set of fixed pca components.
+    """
+
+    components: Tensor
+
+    def __init__(
+        self,
+        components: Tensor,
+        img_size: tuple[int, int, int],
+        patch_size: tuple[int, int, int],
+    ):
+        super().__init__()
+        assert img_size[-2:] == components.shape[-2:], (
+            f"invalid components {tuple(components.shape)}"
+        )
+        assert len(img_size) == len(patch_size) == 3, "only 3D inputs supported"
+        self.img_size = img_size
+        self.patch_size = patch_size
+        components = torch.as_tensor(components, dtype=torch.float32)
+        self.register_buffer("components", components)
+
+    def forward(
+        self, x: Tensor, mask: Tensor | None = None
+    ) -> tuple[Tensor, tuple[Tensor, Tensor]]:
+        B, N, D = x.shape
+        x = unpatchify3d(x, self.patch_size, self.img_size)  # [B, C, T, H, W]
+        coef = torch.einsum("bcthw,nhw->bctn", x, self.components)
+        recon = torch.einsum("bctn,nhw->bcthw", coef, self.components)
+        x = x - recon  # keep residual
+        x = patchify3d(x, self.patch_size)
+        recon = patchify3d(recon, self.patch_size)
+        return x, (coef, recon)
+
+    def inverse(self, x: Tensor, stats: tuple[Tensor, Tensor], mask: Tensor | None = None):
+        coef, recon = stats
+        x = x + recon  # add back pca projection
+        if mask is not None:
+            x = x * mask
+        return x
+
+    def extra_repr(self):
+        return f"{self.components.shape[0]}"
 
 
 class GaussianNoise(nn.Module):

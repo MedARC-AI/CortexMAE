@@ -17,8 +17,10 @@ MaskedDecoder: MAE decoder transformer supporting multiple decoding modes:
 MaskedAutoEncoderViT: full MAE model supporting image and video
 """
 
+import importlib.resources
 from typing import Literal, Type
 
+import numpy as np
 import torch
 import torch.nn as nn
 from torch import Tensor
@@ -37,6 +39,7 @@ from .modules import (
     SinCosPosEmbed2D,
     SinCosPosEmbed3D,
     Normalize,
+    PCANormalize,
     GaussianNoise,
 )
 from .masking import trim_patch_mask, pad_image_mask
@@ -435,7 +438,8 @@ class MaskedAutoencoderViT(nn.Module, PyTorchModelHubMixin):
         head_init_scale: float | None = None,
         pos_embed: Literal["abs", "sep", "sincos"] = "abs",
         decoding: Literal["attn", "cross", "crossreg"] = "attn",
-        target_norm: Literal["none", "global", "frame", "patch"] | None = None,
+        target_norm: Literal["none", "patch", "pca"] | None = None,
+        pca_norm_nc: int = 2,
         gauss_sigma: float | None = None,
     ):
         super().__init__()
@@ -530,13 +534,17 @@ class MaskedAutoencoderViT(nn.Module, PyTorchModelHubMixin):
 
         # mae style target normalization
         # dim is relative to an unflattened embedding tensor of shape [B, *grid_size, D]
-        if target_norm not in {"none", None}:
-            norm_dim = {
-                "global": tuple(range(1, ndim + 2)),  # full sequence
-                "frame": tuple(range(2, ndim + 2)),  # each "frame" (slice along first dim)
-                "patch": -1,  # normalize each patch independently (mae pix norm loss)
-            }[target_norm]
-            self.target_norm = Normalize(self.pred_patchify.grid_size, dim=norm_dim)
+        if target_norm == "patch":
+            # normalize each patch independently (mae pix norm loss)
+            self.target_norm = Normalize(self.pred_patchify.grid_size, dim=-1)
+        elif target_norm == "pca":
+            # subtract out reconstruction by global pca. cf "connectome caricatures"
+            # note this is *only* for fmri flat maps, for which we have precomputed pca
+            # components. (bit of a hack.)
+            T, H, W = self.pred_patchify.img_size  # hack bc we need the target img and patch size
+            self.target_norm = flat_pca_normalize(
+                pca_norm_nc, (T // t_pred_stride, H, W), self.pred_patchify.patch_size
+            )
         else:
             self.target_norm = None
 
@@ -869,6 +877,20 @@ def _init_weights(m: nn.Module) -> None:
         nn.init.constant_(m.weight, 1.0)
         if m.bias is not None:
             nn.init.constant_(m.bias, 0)
+
+
+def flat_pca_normalize(
+    num_components: int, img_size: tuple[int, int, int], patch_size: tuple[int, int, int]
+) -> PCANormalize:
+    # grab precomputed pca components for fmri flat maps
+    # these were computed on the hcpya clips training set using one frame per clip and
+    # normalizing each frame to mean 0 stdev 1. the resulting components closely match
+    # the classic principal gradients.
+    path = importlib.resources.files("flat_mae.resources").joinpath("flat_pca_n8_224_560.npz")
+    components = np.load(path)["components"]
+    components = components[:num_components]
+    norm = PCANormalize(components, img_size, patch_size)
+    return norm
 
 
 def _create_vit(**kwargs):

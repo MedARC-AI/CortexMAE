@@ -68,10 +68,11 @@ model_kwargs:
   pos_embed: sep
 
   # target normalization:
-  #   - global: normalize by global mean/std
-  #   - frame: normalize for each temporal "frame" of the patch grid
   #   - patch: normalize for each patch (same as MAE pix norm loss)
+  #   - pca: subtract reconstruction from pca (cf connectome caricatures). only for flat maps.
   target_norm: null
+  # number of pca components to remove, up to 8.
+  pca_norm_nc: 2
 
   # decoder prediction frame stride from MAE-st. i.e. stride = 2 means predict every
   # other frame starting from frame 0.
