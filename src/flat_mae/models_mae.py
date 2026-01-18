@@ -951,3 +951,80 @@ def mae_vit_small(**kwargs):
 def mae_vit_base(**kwargs):
     model_args = dict(embed_dim=768, depth=12, num_heads=12)
     return _create_mae_vit(**model_args, **kwargs)
+
+
+# Here we create 5 scaled models with the same proportion as vit base
+# Specifically, we preserve:
+# - encoder depth / decoder depth = 3
+# - encoder aspect ratio embed_dim / depth = 64
+# - encoder head_dim = 64
+# - decoder aspect ratio embed_dim / depth = 128
+# - decoder head_dim = 32
+# This follows the design of the nanochat model scaling experiment :)
+
+
+def mae_vit_d15(**kwargs):
+    # nb same as vit base but to complete the sequence
+    kwargs.pop("decoder_depth", None)
+    model_args = dict(
+        embed_dim=960,
+        depth=15,
+        num_heads=15,
+        decoder_depth=5,
+        decoder_embed_dim=640,
+        decoder_num_heads=20,
+    )
+    return _create_mae_vit(**model_args, **kwargs)
+
+
+def mae_vit_d12(**kwargs):
+    # nb same as vit base but to complete the sequence
+    kwargs.pop("decoder_depth", None)
+    model_args = dict(
+        embed_dim=768,
+        depth=12,
+        num_heads=12,
+        decoder_depth=4,
+        decoder_embed_dim=512,
+        decoder_num_heads=16,
+    )
+    return _create_mae_vit(**model_args, **kwargs)
+
+
+def mae_vit_d9(**kwargs):
+    kwargs.pop("decoder_depth", None)
+    model_args = dict(
+        embed_dim=576,
+        depth=9,
+        num_heads=9,
+        decoder_depth=3,
+        decoder_embed_dim=384,
+        decoder_num_heads=12,
+    )
+    return _create_mae_vit(**model_args, **kwargs)
+
+
+def mae_vit_d6(**kwargs):
+    kwargs.pop("decoder_depth", None)
+    model_args = dict(
+        embed_dim=384,
+        depth=6,
+        num_heads=6,
+        decoder_depth=2,
+        decoder_embed_dim=256,
+        decoder_num_heads=8,
+    )
+    return _create_mae_vit(**model_args, **kwargs)
+
+
+def mae_vit_d3(**kwargs):
+    kwargs.pop("decoder_depth", None)
+    model_args = dict(
+        embed_dim=192,
+        depth=3,
+        num_heads=3,
+        decoder_depth=1,
+        decoder_embed_dim=128,
+        decoder_num_heads=4,
+    )
+    return _create_mae_vit(**model_args, **kwargs)

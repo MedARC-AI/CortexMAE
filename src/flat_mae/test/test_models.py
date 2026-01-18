@@ -325,3 +325,19 @@ def test_vit_depth(depth: int):
     x = torch.randn((1, in_chans, num_frames, *img_size))
     cls_embeds, reg_embeds, patch_embeds = model.forward_embedding(x)
     assert not cls_embeds.isnan().any()
+
+
+@pytest.mark.parametrize("depth", [3, 6, 9, 12, 15])
+def test_model_series(depth: int):
+    img_size = (8, 32, 64)
+    patch_size = (4, 8, 8)
+    in_chans = 3
+    model_fn = models_mae.__dict__[f"mae_vit_d{depth}"]
+    model = model_fn(img_size=img_size, patch_size=patch_size, in_chans=in_chans)
+    num_params = sum(p.numel() for p in model.parameters())
+    print(model)
+    print(f"model depth: {depth}, params: {num_params / 1e6:.1f}M")
+
+    x = torch.randn(2, in_chans, *img_size)
+    loss, state = model.forward(x, mask_ratio=0.75)
+    assert not torch.isnan(loss)
