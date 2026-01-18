@@ -163,7 +163,7 @@ def schaefer400_mae(*, ckpt_path: str, **kwargs) -> tuple[Transform, MaskedEncod
 
 @register_model
 def mni_cortex_mae(*, ckpt_path: str, **kwargs) -> tuple[Transform, MaskedEncoderWrapper]:
-    transform = Transform(space="schaefer400")
+    transform = Transform(space="mni_cortex")
     model = models_mae.MaskedAutoencoderViT.from_checkpoint(ckpt_path, **kwargs)
     model = MaskedEncoderWrapper(model.encoder)
     model.__space__ = "mni_cortex"
