@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#SBATCH --job-name=masking
+#SBATCH --job-name=t_patch_size
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-task=1
@@ -8,8 +8,7 @@
 #SBATCH --output=slurms/slurm-%A_%a.out
 #SBATCH --nodelist=n-2,n-3,n-4
 #SBATCH --account=training
-# #SBATCH --array=0-7
-#SBATCH --array=8-11
+#SBATCH --array=0-3
 
 set -euo pipefail
 
@@ -23,23 +22,15 @@ set -a
 source .env
 set +a
 
-EXP_NAME="masking"
+EXP_NAME="t_patch_size"
 EXP_DIR="experiments/${EXP_NAME}"
 OUT_DIR="${EXP_DIR}/output"
 
 configs=(
-    uniform_mr0.5/patch/attn
-    uniform_mr0.75/patch/attn
-    uniform_mr0.9/patch/attn
-    uniform_mr0.95/patch/attn
-    tube_mr0.5/patch/attn
-    tube_mr0.75/patch/attn
-    tube_mr0.9/patch/attn
-    tube_mr0.95/patch/attn
-    tube2x_mr0.75/patch/attn
-    tube2x_mr0.9/patch/attn
-    tube_mr0.9_pep4/patch/attn
-    tube_mr0.9_pep8/patch/attn
+    pt-16/patch/attn
+    pt-8/patch/attn
+    pt-4/patch/attn
+    pt-2/patch/attn
 )
 config=${configs[SLURM_ARRAY_TASK_ID]}
 key=$(echo $config | cut -d / -f 1)
@@ -83,7 +74,7 @@ for ii in $datasetids; do
         continue
     fi
 
-    notes="masking ablations $key; eval (${dataset} ${repr} ${clf})"
+    notes="t_patch_size ablations $key; eval (${dataset} ${repr} ${clf})"
 
     uv run --no-sync python -m fmri_fm_eval.main_probe \
         $model \

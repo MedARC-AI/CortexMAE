@@ -6,9 +6,11 @@
 #SBATCH --time=infinite
 #SBATCH --partition=main
 #SBATCH --output=slurms/slurm-%A_%a.out
-#SBATCH --nodelist=n-2,n-3,n-4
+# #SBATCH --nodelist=n-2,n-3,n-4
+#SBATCH --nodelist=n-1,n-2,n-4
 #SBATCH --account=training
-#SBATCH --array=0-7
+# #SBATCH --array=0-7
+#SBATCH --array=8
 
 set -euo pipefail
 
@@ -33,6 +35,7 @@ configs=(
     "attn_reg1_pep4|model_kwargs.decoding=attn model_kwargs.reg_tokens=1 model_kwargs.pred_edge_pad=4"
     "cross_reg1_pep4|model_kwargs.decoding=cross model_kwargs.reg_tokens=1 model_kwargs.pred_edge_pad=4"
     "crossreg_reg4_pep4|model_kwargs.decoding=crossreg model_kwargs.reg_tokens=4 model_kwargs.pred_edge_pad=4"
+    "crossreg_reg1_pep4|model_kwargs.decoding=crossreg model_kwargs.reg_tokens=1 model_kwargs.pred_edge_pad=4"
 )
 
 config=${configs[SLURM_ARRAY_TASK_ID]}

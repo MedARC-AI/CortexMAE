@@ -6,11 +6,13 @@
 #SBATCH --time=infinite
 #SBATCH --partition=main
 #SBATCH --output=slurms/slurm-%A_%a.out
-#SBATCH --nodelist=n-2
+# #SBATCH --nodelist=n-2
+#SBATCH --nodelist=n-1,n-2,n-4
 #SBATCH --account=training
 # #SBATCH --array=0,4,8,12
 # #SBATCH --array=16-23
-#SBATCH --array=16,17,18,20,21,22
+# #SBATCH --array=16,17,18,20,21,22
+#SBATCH --array=19,23
 
 set -euo pipefail
 

@@ -8,8 +8,10 @@
 #SBATCH --output=slurms/slurm-%A_%a.out
 #SBATCH --nodelist=n-2,n-3,n-4
 #SBATCH --account=training
-#SBATCH --array=0-19
-#SBATCH --dependency=afterany:250
+# #SBATCH --array=0-19
+#SBATCH --array=20-21
+# #SBATCH --dependency=afterany:250
+#SBATCH --dependency=afterany:2781
 
 set -euo pipefail
 
@@ -48,6 +50,8 @@ configs=(
     crossreg_reg16/patch/attn
     crossreg_reg4/reg/attn
     crossreg_reg16/reg/attn
+    crossreg_reg1_pep4/patch/attn
+    crossreg_reg1_pep4/reg/linear
 )
 config=${configs[SLURM_ARRAY_TASK_ID]}
 key=$(echo $config | cut -d / -f 1)
