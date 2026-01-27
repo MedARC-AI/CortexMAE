@@ -943,7 +943,7 @@ requires-dist = [
     { name = "jupyter" },
     { name = "lightning-sdk" },
     { name = "matplotlib" },
-    { name = "neuromaps" },
+    { name = "neuromaps", git = "https://github.com/netneurolab/neuromaps.git?rev=f0ed67c44d633061b93c6d337a1b233f6895c408" },
     { name = "nibabel" },
     { name = "nsdcode", git = "https://github.com/cvnlab/nsdcode.git?rev=bfd36a503cc90a3eb3ebfd69b269403f7e186924" },
     { name = "numpy" },
@@ -2587,8 +2587,8 @@ wheels = [
 
 [[package]]
 name = "neuromaps"
-version = "0.0.5"
-source = { registry = "https://pypi.org/simple" }
+version = "0.0.5+41.gf0ed67c"
+source = { git = "https://github.com/netneurolab/neuromaps.git?rev=f0ed67c44d633061b93c6d337a1b233f6895c408#f0ed67c44d633061b93c6d337a1b233f6895c408" }
 dependencies = [
     { name = "matplotlib" },
     { name = "nibabel" },
@@ -2596,10 +2596,6 @@ dependencies = [
     { name = "numpy" },
     { name = "scikit-learn" },
     { name = "scipy" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/7b/61/49ce118a84941b06e6c8ad6fc14cae471f87ca16ab271da7fe2fc9cb767b/neuromaps-0.0.5.tar.gz", hash = "sha256:a85959088f419dd5ddeeaa7d79c9e3ed13c281c397c9d55275871435b1e9a6e2", size = 109618, upload-time = "2024-02-01T23:50:01.684Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/8f/19/449248987253adcaa4836678438318b88d8f192ec138df4fb5b6c2f2c747/neuromaps-0.0.5-py3-none-any.whl", hash = "sha256:dc4613b8092fe254324c13e007a29c8afd5a1dddef7093b91eae7a9f172cd248", size = 101723, upload-time = "2024-02-01T23:49:59.496Z" },
 ]
 
 [[package]]

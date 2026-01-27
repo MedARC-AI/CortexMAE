@@ -49,6 +49,7 @@ version_file = "src/_version.py"
 [tool.uv.sources]
 fmri-fm-eval = { git = "https://github.com/MedARC-AI/fmri-fm-eval.git", rev = "52c7fd2cfd71441778897369296d6e793373557f" }
 nsdcode = { git = "https://github.com/cvnlab/nsdcode.git", rev = "bfd36a503cc90a3eb3ebfd69b269403f7e186924" }
+neuromaps = { git = "https://github.com/netneurolab/neuromaps.git", rev = "f0ed67c44d633061b93c6d337a1b233f6895c408" }
 
 [tool.ruff]
 line-length = 100
