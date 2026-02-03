@@ -118,9 +118,11 @@ def extract_fmri_sample(sample: dict[str, Any]):
     # fMRI bold data, shape (T, D), dtype float16
     # z-scored per dimension
     bold = sample["bold.npy"]
+    mean = sample["mean.npy"]
+    std = sample["std.npy"]
     # TODO: I changed the key from image -> bold. possibly a bad idea, now have to
     # update everywhere and breaks compatibility.
-    return {"meta": meta, "events": events, "bold": bold}
+    return {"meta": meta, "events": events, "bold": bold, "mean": mean, "std": std}
 
 
 def random_clips(num_frames: int = 16, oversample: float = 1.0):
@@ -142,6 +144,8 @@ def random_clips(num_frames: int = 16, oversample: float = 1.0):
                     "__key__": sample["__key__"],
                     **sample["meta"],
                     "bold": clip,
+                    "mean": sample["mean"],
+                    "std": sample["std"],
                     "start": start,
                 }
 
@@ -165,6 +169,8 @@ def sequential_clips(num_frames: int = 16, stride: int | None = None):
                     "__key__": sample["__key__"],
                     **sample["meta"],
                     "bold": clip,
+                    "mean": sample["mean"],
+                    "std": sample["std"],
                     "start": start,
                 }
 
@@ -193,6 +199,8 @@ def event_clips(num_frames: int = 16, tr: float = 1.0, hrf_delay: float = 0.0):
                     "__key__": sample["__key__"],
                     **sample["meta"],
                     "bold": clip,
+                    "mean": sample["mean"],
+                    "std": sample["std"],
                     "start": start,
                     **event,
                 }

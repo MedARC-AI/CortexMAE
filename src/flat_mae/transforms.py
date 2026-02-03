@@ -29,6 +29,19 @@ class ToTensor:
         return f"{self.__class__.__name__}()"
 
 
+class CoordUnNormalize:
+    def __call__(self, sample: dict) -> dict:
+        bold = sample["bold"]
+        mean = torch.as_tensor(sample["mean"], dtype=torch.float32)
+        std = torch.as_tensor(sample["std"], dtype=torch.float32)
+        bold = bold * std + mean
+        bold = (bold - bold.mean()) / bold.std()
+        return {**sample, "bold": bold}
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}()"
+
+
 class Normalize:
     def __init__(self, mode: Literal["frame", "global"], eps: float = 1e-6):
         self.mode = mode
@@ -388,6 +401,7 @@ def make_transform(
     space: Literal["flat", "schaefer400", "mni_cortex"] = "flat",
     num_frames: int = 16,
     normalize: Literal["global", "frame"] | None = None,
+    no_coord_normalize: bool = False,
     clip_vmax: float | None = 3.0,
     tr_scale: float | None = None,
     crop_scale: float | None = None,
@@ -397,6 +411,9 @@ def make_transform(
     assert crop_scale is None or space == "flat", "crop only supported for flat maps"
 
     transforms = [ToTensor()]
+
+    if no_coord_normalize:
+        transforms.append(CoordUnNormalize())
 
     if tr_scale and tr_scale < 1:
         transforms.append(TemporalRandomResizedCrop(scale=tr_scale, num_frames=num_frames))

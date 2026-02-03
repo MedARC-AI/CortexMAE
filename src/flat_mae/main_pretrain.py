@@ -250,6 +250,7 @@ def create_data_loaders(args: DictConfig):
         space=args.input_space,
         num_frames=args.num_frames,
         normalize=args.normalize,
+        no_coord_normalize=args.get("no_coord_normalize", False),
         clip_vmax=args.clip_vmax,
         tr_scale=args.get("tr_scale"),
         crop_scale=args.get("crop_scale"),
@@ -260,6 +261,7 @@ def create_data_loaders(args: DictConfig):
         space=args.input_space,
         num_frames=args.num_frames,
         normalize=args.normalize,
+        no_coord_normalize=args.get("no_coord_normalize", False),
         clip_vmax=args.clip_vmax,
     )
     print("train transform:", train_transform, sep="\n")
