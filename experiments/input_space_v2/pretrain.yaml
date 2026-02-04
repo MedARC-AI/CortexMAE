@@ -1,0 +1,13 @@
+# intermediate temporal patch size
+t_patch_size: 4
+
+model_kwargs:
+  no_decode_pos: true
+  no_embed_class: true
+  head_init_scale: 0.0
+
+datasets:
+  hcp-train:
+    buffer_size: 2000
+
+plot_period: 5
