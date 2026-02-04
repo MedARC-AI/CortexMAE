@@ -70,16 +70,23 @@ class Transform:
         space: Literal["schaefer400", "flat", "mni_cortex"] = "flat",
         norm: Literal["frame", "global"] | None = "frame",
         clip_vmax: float | None = 3.0,
+        no_coord_normalize: bool = False,
     ):
         super().__init__()
         self.norm = norm
         self.clip_vmax = clip_vmax
         self.target_tr = 1.0
+        self.no_coord_normalize = no_coord_normalize
         self.unmask = flat_transforms.get_unmask(space)
 
     def __call__(self, sample: dict[str, Tensor]) -> dict[str, Tensor]:
         bold = sample["bold"]
+        mean = sample["mean"]
+        std = sample["std"]
         tr = float(sample["tr"])
+
+        if self.no_coord_normalize:
+            bold = bold * std + mean
 
         # temporal resample
         # nb, pretraining data used pchip interpolation, but that's very slow.
@@ -104,6 +111,18 @@ class Transform:
         # expand mask to sampe shape as input for correct collation
         sample["mask"] = sample["mask"].expand_as(sample["bold"])
         return sample
+
+    @staticmethod
+    def from_checkpoint(ckpt_path: str) -> "Transform":
+        ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=True)
+        args = ckpt["args"]
+        transform = Transform(
+            space=args["input_space"],
+            norm=args["normalize"],
+            clip_vmax=args["clip_vmax"],
+            no_coord_normalize=args.get("no_coord_normalize", False),
+        )
+        return transform
 
 
 def normalize(x: torch.Tensor, dim: int | None = None, eps: float = 1e-6) -> torch.Tensor:
@@ -146,7 +165,7 @@ def flat_mae_base_patch16_2(**kwargs) -> tuple[Transform, MaskedEncoderWrapper]:
 
 @register_model
 def flat_mae(*, ckpt_path: str, **kwargs) -> tuple[Transform, MaskedEncoderWrapper]:
-    transform = Transform()
+    transform = Transform.from_checkpoint(ckpt_path)
     model = models_mae.MaskedAutoencoderViT.from_checkpoint(ckpt_path, **kwargs)
     model = MaskedEncoderWrapper(model.encoder)
     return transform, model
@@ -154,7 +173,7 @@ def flat_mae(*, ckpt_path: str, **kwargs) -> tuple[Transform, MaskedEncoderWrapp
 
 @register_model
 def schaefer400_mae(*, ckpt_path: str, **kwargs) -> tuple[Transform, MaskedEncoderWrapper]:
-    transform = Transform(space="schaefer400")
+    transform = Transform.from_checkpoint(ckpt_path)
     model = models_mae.MaskedAutoencoderViT.from_checkpoint(ckpt_path, **kwargs)
     model = MaskedEncoderWrapper(model.encoder)
     model.__space__ = "schaefer400"
@@ -163,7 +182,7 @@ def schaefer400_mae(*, ckpt_path: str, **kwargs) -> tuple[Transform, MaskedEncod
 
 @register_model
 def mni_cortex_mae(*, ckpt_path: str, **kwargs) -> tuple[Transform, MaskedEncoderWrapper]:
-    transform = Transform(space="mni_cortex")
+    transform = Transform.from_checkpoint(ckpt_path)
     model = models_mae.MaskedAutoencoderViT.from_checkpoint(ckpt_path, **kwargs)
     model = MaskedEncoderWrapper(model.encoder)
     model.__space__ = "mni_cortex"
