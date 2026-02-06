@@ -593,20 +593,28 @@ class PCANormalize(nn.Module):
         components = torch.as_tensor(components, dtype=torch.float32)
         self.register_buffer("components", components)
 
-    def forward(
-        self, x: Tensor, mask: Tensor | None = None
-    ) -> tuple[Tensor, tuple[Tensor, Tensor]]:
+    def forward(self, x: Tensor, mask: Tensor | None = None) -> tuple[Tensor, tuple[Tensor, ...]]:
         B, N, D = x.shape
         x = unpatchify3d(x, self.patch_size, self.img_size)  # [B, C, T, H, W]
         coef = torch.einsum("bcthw,nhw->bctn", x, self.components)
         recon = torch.einsum("bctn,nhw->bcthw", coef, self.components)
-        x = x - recon  # keep residual
+        # keep residual
+        x = x - recon
+        # renormalize
+        if mask is not None:
+            mask = unpatchify3d(mask, self.patch_size, self.img_size)
+            x, mean, std = masked_normalize(x, mask, dim=(3, 4))
+        else:
+            x, mean, std = normalize(x, dim=(3, 4))
+        mean = patchify3d(mean.expand_as(x), self.patch_size)
+        std = patchify3d(std.expand_as(x), self.patch_size)
         x = patchify3d(x, self.patch_size)
         recon = patchify3d(recon, self.patch_size)
-        return x, (coef, recon)
+        return x, (coef, recon, mean, std)
 
-    def inverse(self, x: Tensor, stats: tuple[Tensor, Tensor], mask: Tensor | None = None):
-        coef, recon = stats
+    def inverse(self, x: Tensor, stats: tuple[Tensor, ...], mask: Tensor | None = None):
+        coef, recon, mean, std = stats
+        x = x * std + mean  # unnormalize
         x = x + recon  # add back pca projection
         if mask is not None:
             x = x * mask
