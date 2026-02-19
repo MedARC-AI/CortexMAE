@@ -6,11 +6,15 @@
 #SBATCH --time=infinite
 #SBATCH --partition=main
 #SBATCH --output=slurms/slurm-%A_%a.out
-#SBATCH --nodelist=n-1,n-2
+# #SBATCH --nodelist=n-3
+#SBATCH --nodelist=n-4
 #SBATCH --account=training
 # #SBATCH --array=0-11
 # #SBATCH --array=12-15
-#SBATCH --array=16-26
+# #SBATCH --array=16-26
+# #SBATCH --array=27-32
+# #SBATCH --array=33-35
+#SBATCH --array=33,35
 
 set -euo pipefail
 
@@ -54,6 +58,15 @@ configs=(
     "mni_cortex_lr1e-3_3|input_space=mni_cortex base_lr=1e-3 seed=5403"
     "mni_cortex_lr1e-3_4|input_space=mni_cortex base_lr=1e-3 seed=5404"
     "mni_cortex_lr1e-3_5|input_space=mni_cortex base_lr=1e-3 seed=5405"
+    "flat_lr1e-3_6|input_space=flat base_lr=1e-3 seed=5406"
+    "flat_lr1e-3_7|input_space=flat base_lr=1e-3 seed=5407"
+    "flat_lr1e-3_8|input_space=flat base_lr=1e-3 seed=5408"
+    "schaefer400_lr3e-4_6|input_space=schaefer400 base_lr=3e-4 seed=5406"
+    "schaefer400_lr3e-4_7|input_space=schaefer400 base_lr=3e-4 seed=5407"
+    "schaefer400_lr3e-4_8|input_space=schaefer400 base_lr=3e-4 seed=5408"
+    "mni_cortex_lr1e-3_6|input_space=mni_cortex base_lr=1e-3 seed=5406"
+    "mni_cortex_lr1e-3_7|input_space=mni_cortex base_lr=1e-3 seed=5407"
+    "mni_cortex_lr1e-3_8|input_space=mni_cortex base_lr=1e-3 seed=5408"
 )
 
 config=${configs[SLURM_ARRAY_TASK_ID]}
