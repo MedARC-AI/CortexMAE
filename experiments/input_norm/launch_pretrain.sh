@@ -6,9 +6,10 @@
 #SBATCH --time=infinite
 #SBATCH --partition=main
 #SBATCH --output=slurms/slurm-%A_%a.out
-#SBATCH --nodelist=n-1,n-2
+#SBATCH --nodelist=n-1,n-2,n-3,n-4
 #SBATCH --account=training
-#SBATCH --array=0-4
+# #SBATCH --array=0-4
+#SBATCH --array=5-6
 
 set -euo pipefail
 
@@ -30,6 +31,8 @@ configs=(
     "coord_none|no_coord_normalize=false normalize=null"
     "nocoord_frame|no_coord_normalize=true normalize=frame"
     "nocoord_global|no_coord_normalize=true normalize=global"
+    "nocoord_frame_mni|no_coord_normalize=true normalize=frame input_space=mni_cortex"
+    "nocoord_global_mni|no_coord_normalize=true normalize=global input_space=mni_cortex"
 )
 
 config=${configs[SLURM_ARRAY_TASK_ID]}
