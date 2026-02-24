@@ -8,11 +8,13 @@
 #SBATCH --output=slurms/slurm-%A_%a.out
 #SBATCH --nodelist=n-2,n-3,n-4
 #SBATCH --account=training
-#SBATCH --array=0-8
+# #SBATCH --array=0-8
+#SBATCH --array=9-12
 
 set -euo pipefail
 
-ROOT="${HOME}/fmri-fm"
+# ROOT="${HOME}/fmri-fm"
+ROOT="/data/connor/fmri-fm"
 cd $ROOT
 
 # export all env variables
@@ -38,6 +40,10 @@ configs=(
     "d9_wds|model=mae_vit_d9 weight_decay=0.088"
     "d15_wds|model=mae_vit_d15 weight_decay=0.032"
     "d12|model=mae_vit_d12"
+    "d3_2|model=mae_vit_d3 seed=4129"
+    "d6_2|model=mae_vit_d6 seed=4129"
+    "d9_2|model=mae_vit_d9 seed=4129"
+    "d15_2|model=mae_vit_d15 seed=4129"
 )
 
 config=${configs[SLURM_ARRAY_TASK_ID]}
