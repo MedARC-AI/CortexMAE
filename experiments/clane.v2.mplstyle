@@ -2,9 +2,8 @@ lines.linewidth: 0.5
 lines.markersize: 1
 
 font.family: sans-serif
-font.sans-serif: DejaVu Sans, Arial
-font.serif: Times New Roman
-font.size: 6
+font.sans-serif: DejaVu Sans
+font.size: 5.5
 font.weight: medium
 mathtext.fontset: cm
 
@@ -51,7 +50,7 @@ grid.alpha: 0.5
 axes.spines.top: False
 axes.spines.right: False
 
-legend.frameon: True
+legend.frameon: False
 legend.fontsize: small
 legend.fancybox: True
 legend.borderpad:     0.2  # border whitespace
