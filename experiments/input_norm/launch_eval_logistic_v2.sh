@@ -6,9 +6,10 @@
 #SBATCH --time=infinite
 #SBATCH --partition=main
 #SBATCH --output=slurms/slurm-%A_%a.out
-#SBATCH --nodelist=n-1,n-4
+#SBATCH --nodelist=n-1,n-2,n-3,n-4
 #SBATCH --account=training
-#SBATCH --array=0-48
+# #SBATCH --array=0-48
+#SBATCH --array=35-97
 
 set -euo pipefail
 
@@ -35,6 +36,13 @@ configs=(
     nocoord_global/cls
     nocoord_frame_mni/cls
     nocoord_global_mni/cls
+    coord_frame/patch
+    coord_global/patch
+    coord_none/patch
+    nocoord_frame/patch
+    nocoord_global/patch
+    nocoord_frame_mni/patch
+    nocoord_global_mni/patch
 )
 
 datasets=(
@@ -58,7 +66,11 @@ key=$(echo $config | cut -d / -f 1)
 repr=$(echo $config | cut -d / -f 2)
 clf="logistic"
 
-model="flat_mae"
+if [[ $key == *_mni ]]; then
+    model="mni_cortex_mae"
+else
+    model="flat_mae"
+fi
 ckpt_path="${OUT_DIR}/${EXP_NAME}/${key}/pretrain/checkpoint-last.pth"
 if [[ ! -f $ckpt_path ]]; then
     echo "checkpoint ${ckpt_path} doesn't exist; not running"

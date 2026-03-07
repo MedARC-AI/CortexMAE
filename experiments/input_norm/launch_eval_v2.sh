@@ -6,9 +6,10 @@
 #SBATCH --time=infinite
 #SBATCH --partition=main
 #SBATCH --output=slurms/slurm-%A_%a.out
-#SBATCH --nodelist=n-1,n-2
+#SBATCH --nodelist=n-1,n-2,n-3,n-4
 #SBATCH --account=training
-#SBATCH --array=0-13
+# #SBATCH --array=0-13
+#SBATCH --array=10-13
 
 set -euo pipefail
 
@@ -55,7 +56,11 @@ key=$(echo $config | cut -d / -f 1)
 repr=$(echo $config | cut -d / -f 2)
 clf=$(echo $config | cut -d / -f 3)
 
-model="flat_mae"
+if [[ $key == *_mni ]]; then
+    model="mni_cortex_mae"
+else
+    model="flat_mae"
+fi
 ckpt_path="${OUT_DIR}/${EXP_NAME}/${key}/pretrain/checkpoint-last.pth"
 if [[ ! -f $ckpt_path ]]; then
     echo "checkpoint ${ckpt_path} doesn't exist; not running"

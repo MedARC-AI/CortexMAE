@@ -6,13 +6,14 @@
 #SBATCH --time=infinite
 #SBATCH --partition=main
 #SBATCH --output=slurms/slurm-%A_%a.out
-#SBATCH --nodelist=n-1,n-2
+#SBATCH --nodelist=n-1,n-2,n-3,n-4
 #SBATCH --account=training
-#SBATCH --array=0
+#SBATCH --array=0-2
 
 set -euo pipefail
 
-ROOT="${HOME}/fmri-fm"
+# ROOT="${HOME}/fmri-fm"
+ROOT="/data/connor/fmri-fm"
 cd $ROOT
 
 # export all env variables
@@ -26,6 +27,8 @@ OUT_DIR="${EXP_DIR}/output"
 
 configs=(
     "patch8|patch_size=8 mask_patch_size=16"
+    "patch8_mps8|patch_size=8"
+    "patch8_mps8_2|patch_size=8 checkpoint_period=5"
 )
 
 config=${configs[SLURM_ARRAY_TASK_ID]}
@@ -38,7 +41,7 @@ notes="patch_size ablations $name (${overrides})"
 
 # add small delay between jobs
 # bit of hack to try to get wandb to assign different colors
-sleep $(( SLURM_ARRAY_TASK_ID * 10 ))
+# sleep $(( SLURM_ARRAY_TASK_ID * 10 ))
 
 # for debugging
 # overrides="${overrides} debug=true wandb=false"

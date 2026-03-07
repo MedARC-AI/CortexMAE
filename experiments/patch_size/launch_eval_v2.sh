@@ -6,9 +6,9 @@
 #SBATCH --time=infinite
 #SBATCH --partition=main
 #SBATCH --output=slurms/slurm-%A_%a.out
-#SBATCH --nodelist=n-1,n-2
+#SBATCH --nodelist=n-1,n-2,n-3,n-4
 #SBATCH --account=training
-#SBATCH --array=0-1
+#SBATCH --array=2-5
 
 set -euo pipefail
 
@@ -29,6 +29,8 @@ OUT_DIR="${EXP_DIR}/output"
 
 configs=(
     patch8/patch/attn
+    patch8_mps8/patch/attn
+    patch8_mps8_2/patch/attn
 )
 
 datasets=(
