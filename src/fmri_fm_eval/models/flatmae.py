@@ -113,14 +113,16 @@ class Transform:
         return sample
 
     @staticmethod
-    def from_checkpoint(ckpt_path: str) -> "Transform":
+    def from_checkpoint(ckpt_path: str, no_coord_normalize: bool | None = None) -> "Transform":
         ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=True)
         args = ckpt["args"]
+        if no_coord_normalize is None:
+            no_coord_normalize = args.get("no_coord_normalize", False)
         transform = Transform(
             space=args["input_space"],
             norm=args["normalize"],
             clip_vmax=args["clip_vmax"],
-            no_coord_normalize=args.get("no_coord_normalize", False),
+            no_coord_normalize=no_coord_normalize,
         )
         return transform
 
@@ -164,16 +166,20 @@ def flat_mae_base_patch16_2(**kwargs) -> tuple[Transform, MaskedEncoderWrapper]:
 
 
 @register_model
-def flat_mae(*, ckpt_path: str, **kwargs) -> tuple[Transform, MaskedEncoderWrapper]:
-    transform = Transform.from_checkpoint(ckpt_path)
+def flat_mae(
+    *, ckpt_path: str, no_coord_normalize: bool | None = None, **kwargs
+) -> tuple[Transform, MaskedEncoderWrapper]:
+    transform = Transform.from_checkpoint(ckpt_path, no_coord_normalize=no_coord_normalize)
     model = models_mae.MaskedAutoencoderViT.from_checkpoint(ckpt_path, **kwargs)
     model = MaskedEncoderWrapper(model.encoder)
     return transform, model
 
 
 @register_model
-def schaefer400_mae(*, ckpt_path: str, **kwargs) -> tuple[Transform, MaskedEncoderWrapper]:
-    transform = Transform.from_checkpoint(ckpt_path)
+def schaefer400_mae(
+    *, ckpt_path: str, no_coord_normalize: bool | None = None, **kwargs
+) -> tuple[Transform, MaskedEncoderWrapper]:
+    transform = Transform.from_checkpoint(ckpt_path, no_coord_normalize=no_coord_normalize)
     model = models_mae.MaskedAutoencoderViT.from_checkpoint(ckpt_path, **kwargs)
     model = MaskedEncoderWrapper(model.encoder)
     model.__space__ = "schaefer400"
@@ -181,8 +187,10 @@ def schaefer400_mae(*, ckpt_path: str, **kwargs) -> tuple[Transform, MaskedEncod
 
 
 @register_model
-def mni_cortex_mae(*, ckpt_path: str, **kwargs) -> tuple[Transform, MaskedEncoderWrapper]:
-    transform = Transform.from_checkpoint(ckpt_path)
+def mni_cortex_mae(
+    *, ckpt_path: str, no_coord_normalize: bool | None = None, **kwargs
+) -> tuple[Transform, MaskedEncoderWrapper]:
+    transform = Transform.from_checkpoint(ckpt_path, no_coord_normalize=no_coord_normalize)
     model = models_mae.MaskedAutoencoderViT.from_checkpoint(ckpt_path, **kwargs)
     model = MaskedEncoderWrapper(model.encoder)
     model.__space__ = "mni_cortex"
