@@ -82,6 +82,12 @@ def main(args: DictConfig):
         # patch size is therefore fixed.
         args.img_size = (465, 512)
         args.patch_size = (1, 512)
+    elif args.input_space == "schaefer400_tians3":
+        args.img_size = (450, 1)
+        args.patch_size = 1
+    elif args.input_space == "a424":
+        args.img_size = (424, 1)
+        args.patch_size = 1
     else:
         raise ValueError(f"input space {args.input_space} not implemented")
 

@@ -36,6 +36,7 @@ from sklearn.neighbors import NearestNeighbors
 logging.getLogger("nibabel").setLevel(logging.ERROR)
 
 FSLR64K_NUM_VERTICES = 64984
+FSLR91K_NUM_VERTICES = 91282
 
 
 # NIFTI/CIFTI related utils

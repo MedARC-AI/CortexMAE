@@ -12,9 +12,6 @@ import neuromaps.transforms
 
 import flat_mae.nisc as nisc
 
-# TODO:
-#   - pca noising, ie pink noise
-
 # shared flat map resampler
 _FLAT_RESAMPLER = nisc.flat_resampler_fslr64k_224_560()
 
@@ -142,13 +139,12 @@ class FlatUnmask:
         return f"{self.__class__.__name__}({tuple(self.mask.shape)})"
 
 
-class Schaefer400Unmask:
-    dim = 400
-
-    def __init__(self):
-        parc_path = nisc.fetch_schaefer(400, space="fslr64k")
-        parc = nisc.read_cifti_surf_data(parc_path).squeeze(0)
+class ParcelUnmask:
+    def __init__(self, parc: np.ndarray, dim: int):
+        assert parc.ndim == 1
+        assert parc.shape[0] == nisc.FSLR64K_NUM_VERTICES
         self.parc = torch.as_tensor(parc, dtype=torch.int64)
+        self.dim = dim
 
     def __call__(self, sample: dict) -> dict:
         bold = sample["bold"]
@@ -177,6 +173,29 @@ class Schaefer400Unmask:
 
     def __repr__(self):
         return f"{self.__class__.__name__}({self.dim})"
+
+
+class Schaefer400Unmask(ParcelUnmask):
+    def __init__(self):
+        parc_path = nisc.fetch_schaefer(400, space="fslr64k")
+        parc = nisc.read_cifti_surf_data(parc_path).squeeze(0)
+        super().__init__(parc, dim=400)
+
+
+class Schaefer400TianS3Unmask(ParcelUnmask):
+    def __init__(self):
+        parc_path = nisc.fetch_schaefer_tian(400, 3, space="fslr91k")
+        # nb, we only pass the surface part of the parcellation, used for vis only
+        parc = nisc.read_cifti_surf_data(parc_path).squeeze(0)
+        super().__init__(parc, dim=450)
+
+
+class A424Unmask(ParcelUnmask):
+    def __init__(self):
+        parc_path = nisc.fetch_a424(cifti=True)
+        # nb, we only pass the surface part of the parcellation, used for vis only
+        parc = nisc.read_cifti_surf_data(parc_path).squeeze(0)
+        super().__init__(parc, dim=424)
 
 
 class MNICortexUnmask:
@@ -400,7 +419,7 @@ class GrayJitter:
 
 
 def make_transform(
-    space: Literal["flat", "schaefer400", "mni_cortex"] = "flat",
+    space: Literal["flat", "schaefer400", "mni_cortex", "schaefer400_tians3", "a424"] = "flat",
     num_frames: int = 16,
     normalize: Literal["global", "frame"] | None = None,
     no_coord_normalize: bool = False,
@@ -440,7 +459,9 @@ def make_transform(
 
 
 @cache
-def get_unmask(space: Literal["flat", "schaefer400", "mni_cortex"] = "flat"):
+def get_unmask(
+    space: Literal["flat", "schaefer400", "mni_cortex", "schaefer400_tians3", "a424"] = "flat",
+):
     """
     return singleton unmask fn.
 
@@ -451,6 +472,8 @@ def get_unmask(space: Literal["flat", "schaefer400", "mni_cortex"] = "flat"):
         "flat": FlatUnmask,
         "schaefer400": Schaefer400Unmask,
         "mni_cortex": MNICortexUnmask,
+        "schaefer400_tians3": Schaefer400TianS3Unmask,
+        "a424": A424Unmask,
     }[space]
     unmask = unmask_cls()
     return unmask
