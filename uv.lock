@@ -953,7 +953,7 @@ requires-dist = [
     { name = "pycortex" },
     { name = "pytest" },
     { name = "s3fs" },
-    { name = "scikit-image", specifier = ">=0.26.0" },
+    { name = "scikit-image" },
     { name = "scikit-learn" },
     { name = "scipy" },
     { name = "timm" },
