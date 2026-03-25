@@ -195,3 +195,25 @@ def mni_cortex_mae(
     model = MaskedEncoderWrapper(model.encoder)
     model.__space__ = "mni_cortex"
     return transform, model
+
+
+@register_model
+def schaefer400_tians3_mae(
+    *, ckpt_path: str, no_coord_normalize: bool | None = None, **kwargs
+) -> tuple[Transform, MaskedEncoderWrapper]:
+    transform = Transform.from_checkpoint(ckpt_path, no_coord_normalize=no_coord_normalize)
+    model = models_mae.MaskedAutoencoderViT.from_checkpoint(ckpt_path, **kwargs)
+    model = MaskedEncoderWrapper(model.encoder)
+    model.__space__ = "schaefer400_tians3"
+    return transform, model
+
+
+@register_model
+def a424_mae(
+    *, ckpt_path: str, no_coord_normalize: bool | None = None, **kwargs
+) -> tuple[Transform, MaskedEncoderWrapper]:
+    transform = Transform.from_checkpoint(ckpt_path, no_coord_normalize=no_coord_normalize)
+    model = models_mae.MaskedAutoencoderViT.from_checkpoint(ckpt_path, **kwargs)
+    model = MaskedEncoderWrapper(model.encoder)
+    model.__space__ = "a424"
+    return transform, model
