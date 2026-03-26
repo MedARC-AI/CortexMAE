@@ -48,7 +48,7 @@ eval = [
 version_file = "src/_version.py"
 
 [tool.uv.sources]
-fmri-fm-eval = { git = "https://github.com/clane9/fmri-fm-eval.git", rev = "ac877642bb8dd8c81dd3fadf0562e7f8a858936b" }
+fmri-fm-eval = { git = "https://github.com/clane9/fmri-fm-eval.git", rev = "1343b9de6cf4220a6f6e87ec20d47f94b698b4f1" }
 nsdcode = { git = "https://github.com/cvnlab/nsdcode.git", rev = "bfd36a503cc90a3eb3ebfd69b269403f7e186924" }
 neuromaps = { git = "https://github.com/netneurolab/neuromaps.git", rev = "f0ed67c44d633061b93c6d337a1b233f6895c408" }
 

@@ -167,10 +167,17 @@ def flat_mae_base_patch16_2(**kwargs) -> tuple[Transform, MaskedEncoderWrapper]:
 
 @register_model
 def flat_mae(
-    *, ckpt_path: str, no_coord_normalize: bool | None = None, **kwargs
+    *,
+    ckpt_path: str,
+    no_coord_normalize: bool | None = None,
+    scratch_init: bool = False,
+    **kwargs,
 ) -> tuple[Transform, MaskedEncoderWrapper]:
     transform = Transform.from_checkpoint(ckpt_path, no_coord_normalize=no_coord_normalize)
     model = models_mae.MaskedAutoencoderViT.from_checkpoint(ckpt_path, **kwargs)
+    # re-init weights to train from scratch
+    if scratch_init:
+        model.init_weights()
     model = MaskedEncoderWrapper(model.encoder)
     return transform, model
 
