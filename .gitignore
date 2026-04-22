@@ -29,6 +29,7 @@ wandb
 jobs
 output
 slurm-*
+experiments/**/data
 
 # Local scratch/tmp
 .scratch
