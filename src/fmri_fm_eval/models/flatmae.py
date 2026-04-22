@@ -171,6 +171,7 @@ def flat_mae(
     ckpt_path: str,
     no_coord_normalize: bool | None = None,
     scratch_init: bool = False,
+    keep_blocks: int | None = None,
     **kwargs,
 ) -> tuple[Transform, MaskedEncoderWrapper]:
     transform = Transform.from_checkpoint(ckpt_path, no_coord_normalize=no_coord_normalize)
@@ -178,6 +179,9 @@ def flat_mae(
     # re-init weights to train from scratch
     if scratch_init:
         model.init_weights()
+    # remove some vit blocks (nb keep_blocks=0 is patch embed only)
+    if keep_blocks is not None:
+        model.encoder.blocks = model.encoder.blocks[:keep_blocks]
     model = MaskedEncoderWrapper(model.encoder)
     return transform, model
 
