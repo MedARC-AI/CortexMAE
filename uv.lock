@@ -955,7 +955,7 @@ requires-dist = [
     { name = "cloudpathlib", extras = ["s3"] },
     { name = "datasets" },
     { name = "einops" },
-    { name = "fmri-fm-eval", marker = "extra == 'eval'", git = "https://github.com/clane9/fmri-fm-eval.git?rev=f97f52698b01705d0b7b22e83b0ace5bf8b2e219" },
+    { name = "fmri-fm-eval", marker = "extra == 'eval'", git = "https://github.com/clane9/fmri-fm-eval.git?rev=65be98d36abc6dc59e7db68d68f7f63123a3fee6" },
     { name = "huggingface-hub" },
     { name = "ipython" },
     { name = "jaxtyping" },
@@ -985,8 +985,8 @@ provides-extras = ["eval"]
 
 [[package]]
 name = "fmri-fm-eval"
-version = "0.1.dev86+gf97f52698"
-source = { git = "https://github.com/clane9/fmri-fm-eval.git?rev=f97f52698b01705d0b7b22e83b0ace5bf8b2e219#f97f52698b01705d0b7b22e83b0ace5bf8b2e219" }
+version = "0.1.dev95+g65be98d36"
+source = { git = "https://github.com/clane9/fmri-fm-eval.git?rev=65be98d36abc6dc59e7db68d68f7f63123a3fee6#65be98d36abc6dc59e7db68d68f7f63123a3fee6" }
 dependencies = [
     { name = "cloudpathlib", extra = ["s3"] },
     { name = "datasets" },
