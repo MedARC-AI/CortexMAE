@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#SBATCH --job-name=train_schedule
+#SBATCH --job-name=rest_v_task
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-task=1
@@ -8,7 +8,7 @@
 #SBATCH --output=slurms/slurm-%A_%a.out
 #SBATCH --account=training
 #SBATCH --qos=low
-#SBATCH --array=10-11
+#SBATCH --array=0-7
 #SBATCH --requeue
 
 set -euo pipefail
@@ -21,32 +21,29 @@ set -a
 source .env
 set +a
 
-EXP_NAME="train_schedule"
+EXP_NAME="rest_v_task"
 EXP_DIR="experiments/${EXP_NAME}"
 OUT_DIR="${EXP_DIR}/output"
 
 configs=(
-    "ep100_1|epochs=100 seed=6101"
-    "ep100_2|epochs=100 seed=6102"
-    "ep50_1|epochs=50 seed=6101"
-    "ep50_2|epochs=50 seed=6102"
-    "ep25_1|epochs=25 seed=6101"
-    "ep25_2|epochs=25 seed=6102"
-    "ep200_1|epochs=200 seed=6101"
-    "ep200_2|epochs=200 seed=6102"
-    "ep10_1|epochs=10 seed=6101"
-    "ep10_2|epochs=10 seed=6102"
-    "ep5_1|epochs=5 seed=6101"
-    "ep5_2|epochs=5 seed=6102"
+    "rest_ep50_1|epochs=50 seed=6101|rest"
+    "rest_ep50_2|epochs=50 seed=6102|rest"
+    "task_ep50_1|epochs=50 seed=6101|task"
+    "task_ep50_2|epochs=50 seed=6102|task"
+    "rest_ep100_1|epochs=100 seed=6101|rest"
+    "rest_ep100_2|epochs=100 seed=6102|rest"
+    "task_ep100_1|epochs=100 seed=6101|task"
+    "task_ep100_2|epochs=100 seed=6102|task"
 )
 
 config=${configs[SLURM_ARRAY_TASK_ID]}
 name=$(echo $config | cut -d '|' -f 1)
 overrides=$(echo $config | cut -d '|' -f 2)
+subset=$(echo $config | cut -d '|' -f 3)
 
-base_config="${EXP_DIR}/pretrain.yaml"
+base_config="${EXP_DIR}/pretrain_${subset}.yaml"
 fullname="${EXP_NAME}/${name}/pretrain"
-notes="train schedule ablation $name (${overrides})"
+notes="rest_v_task ablation $name (${overrides})"
 
 # add small delay between jobs
 # bit of hack to try to get wandb to assign different colors
