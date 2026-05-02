@@ -1,0 +1,191 @@
+fMRI foundation model flops benchmark
+version: 0.1.dev95+g65be98d36
+sha: 4880d9c202a7afdf3926b387bc3dc8ead1d24567, status: has uncommitted changes, branch: dev/clane9
+cwd: /data/connor/fmri-fm
+start: 2026-04-30 15:02:39
+config:
+output_root: output
+name_prefix: eval_probe
+remote_root: null
+notes: null
+model_kwargs:
+  ckpt_path: experiments/input_space_v3/output/input_space_v3/schaefer400_lr3e-4_1/pretrain/checkpoint-last.pth
+dataset_kwargs: {}
+classifier_kwargs:
+  embed_dim: null
+  dropout: 0.0
+  xavier_init: true
+  norm: true
+lr_scale_grid:
+- 0.02
+- 0.023
+- 0.028
+- 0.033
+- 0.038
+- 0.045
+- 0.053
+- 0.062
+- 0.074
+- 0.087
+- 0.1
+- 0.12
+- 0.14
+- 0.17
+- 0.2
+- 0.23
+- 0.27
+- 0.32
+- 0.38
+- 0.44
+- 0.52
+- 0.61
+- 0.72
+- 0.85
+- 1
+- 1.2
+- 1.4
+- 1.6
+- 1.9
+- 2.3
+- 2.7
+- 3.1
+- 3.7
+- 4.3
+- 5.1
+- 6
+- 7.1
+- 8.3
+- 9.8
+- 12
+- 14
+- 16
+- 19
+- 22
+- 26
+- 31
+- 36
+- 43
+- 50
+wd_scale_grid:
+- 1.0
+num_workers: 8
+prefetch_factor: null
+balanced_sampling: false
+epochs: 20
+steps_per_epoch: 200
+batch_size: 32
+accum_iter: 2
+lr: 0.0003
+warmup_epochs: 5
+no_decay: false
+weight_decay: 0.05
+clip_grad: 1.0
+metrics:
+- acc
+- f1
+cv_metric: acc
+early_stopping: true
+amp: true
+device: cuda
+seed: 4466
+debug: false
+wandb: false
+wandb_entity: null
+wandb_project: fMRI-fm-eval
+model: schaefer400_mae
+dataset: hcpya_task21
+distributed: false
+
+creating frozen backbone model: schaefer400_mae
+backbone:
+MaskedEncoderWrapper(
+  (model): MaskedEncoder(
+    class_token=True, reg_tokens=0, no_embed_class=True, mask_drop_scale=False
+    (patchify): Patchify3D((16, 400, 1), (4, 1, 1), in_chans=1)
+    (patch_embed): Linear(in_features=4, out_features=768, bias=True)
+    (pos_embed): SeparablePosEmbed(768, (4, 400, 1))
+    (blocks): ModuleList(
+      (0-11): 12 x Block(
+        (norm1): LayerNorm((768,), eps=1e-06, elementwise_affine=True)
+        (attn): Attention(
+          num_heads=12
+          (q): Linear(in_features=768, out_features=768, bias=True)
+          (k): Linear(in_features=768, out_features=768, bias=True)
+          (v): Linear(in_features=768, out_features=768, bias=True)
+          (proj): Linear(in_features=768, out_features=768, bias=True)
+        )
+        (drop_path1): Identity()
+        (norm2): LayerNorm((768,), eps=1e-06, elementwise_affine=True)
+        (mlp): Mlp(
+          (fc1): Linear(in_features=768, out_features=3072, bias=True)
+          (act): GELU(approximate='none')
+          (fc2): Linear(in_features=3072, out_features=768, bias=True)
+        )
+        (drop_path2): Identity()
+      )
+    )
+    (norm): LayerNorm((768,), eps=1e-06, elementwise_affine=True)
+  )
+)
+backbone params: 85.4M
+creating dataset: hcpya_task21 (schaefer400)
+train (n=18999):
+HFDataset(
+    dataset=Dataset({
+    features: ['sub', 'task', 'cond', 'cond_id', 'path', 'start', 'end', 'n_frames', 'tr', 'bold', 'mean', 'std'],
+    num_rows: 18999
+}),
+    labels=[ 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20],
+    counts=[ 832 1248 3201 1660  832  832  832  832  832 1248 1247 1243  832  416
+  416  416  416  416  416  416  416]
+)
+
+validation (n=4032):
+HFDataset(
+    dataset=Dataset({
+    features: ['sub', 'task', 'cond', 'cond_id', 'path', 'start', 'end', 'n_frames', 'tr', 'bold', 'mean', 'std'],
+    num_rows: 4032
+}),
+    labels=[ 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20],
+    counts=[176 264 688 352 176 176 176 176 176 264 264 264 176  88  88  88  88  88
+  88  88  88]
+)
+
+test (n=5040):
+HFDataset(
+    dataset=Dataset({
+    features: ['sub', 'task', 'cond', 'cond_id', 'path', 'start', 'end', 'n_frames', 'tr', 'bold', 'mean', 'std'],
+    num_rows: 5040
+}),
+    labels=[ 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20],
+    counts=[220 330 860 440 220 220 220 220 220 330 330 330 220 110 110 110 110 110
+ 110 110 110]
+)
+
+input size: [16, 400]
+total flops: 366.5G
+benchmarking data loading
+load step 20/200 | 5281 samp/s | 135 MB/s
+load step 40/200 | 4695 samp/s | 120 MB/s
+load step 60/200 | 4515 samp/s | 116 MB/s
+load step 80/200 | 4656 samp/s | 119 MB/s
+load step 100/200 | 4483 samp/s | 115 MB/s
+load step 120/200 | 4618 samp/s | 118 MB/s
+load step 140/200 | 4433 samp/s | 113 MB/s
+load step 160/200 | 4513 samp/s | 116 MB/s
+load step 180/200 | 4486 samp/s | 115 MB/s
+load step 200/200 | 4533 samp/s | 116 MB/s
+benchmarking forward pass
+fwd step 20/200 | 796.5 sample/s | 292 Tflop/s
+fwd step 40/200 | 796.7 sample/s | 292 Tflop/s
+fwd step 60/200 | 796.9 sample/s | 292 Tflop/s
+fwd step 80/200 | 797.3 sample/s | 292 Tflop/s
+fwd step 100/200 | 797.9 sample/s | 292 Tflop/s
+fwd step 120/200 | 796.8 sample/s | 292 Tflop/s
+fwd step 140/200 | 796.4 sample/s | 292 Tflop/s
+fwd step 160/200 | 796.2 sample/s | 292 Tflop/s
+fwd step 180/200 | 796.1 sample/s | 292 Tflop/s
+fwd step 200/200 | 796.0 sample/s | 292 Tflop/s
+result:
+----
+{"model": "schaefer400_mae", "dataset": "hcpya_task21", "input_shape": [16, 400], "params": 85370880, "gflop": 366.460440576, "load_sps": 4532.617018622807, "load_fps": 72521.87229796492, "load_mbs": 116.03499567674386, "fwd_sps": 796.0454666359371, "fwd_fps": 12736.727466174994, "fwd_tflops": 291.719172421933}

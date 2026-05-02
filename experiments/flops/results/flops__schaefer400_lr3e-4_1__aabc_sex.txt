@@ -1,0 +1,188 @@
+fMRI foundation model flops benchmark
+version: 0.1.dev95+g65be98d36
+sha: 4880d9c202a7afdf3926b387bc3dc8ead1d24567, status: has uncommitted changes, branch: dev/clane9
+cwd: /data/connor/fmri-fm
+start: 2026-04-30 15:02:39
+config:
+output_root: output
+name_prefix: eval_probe
+remote_root: null
+notes: null
+model_kwargs:
+  ckpt_path: experiments/input_space_v3/output/input_space_v3/schaefer400_lr3e-4_1/pretrain/checkpoint-last.pth
+dataset_kwargs: {}
+classifier_kwargs:
+  embed_dim: null
+  dropout: 0.0
+  xavier_init: true
+  norm: true
+lr_scale_grid:
+- 0.02
+- 0.023
+- 0.028
+- 0.033
+- 0.038
+- 0.045
+- 0.053
+- 0.062
+- 0.074
+- 0.087
+- 0.1
+- 0.12
+- 0.14
+- 0.17
+- 0.2
+- 0.23
+- 0.27
+- 0.32
+- 0.38
+- 0.44
+- 0.52
+- 0.61
+- 0.72
+- 0.85
+- 1
+- 1.2
+- 1.4
+- 1.6
+- 1.9
+- 2.3
+- 2.7
+- 3.1
+- 3.7
+- 4.3
+- 5.1
+- 6
+- 7.1
+- 8.3
+- 9.8
+- 12
+- 14
+- 16
+- 19
+- 22
+- 26
+- 31
+- 36
+- 43
+- 50
+wd_scale_grid:
+- 1.0
+num_workers: 8
+prefetch_factor: null
+balanced_sampling: false
+epochs: 20
+steps_per_epoch: 200
+batch_size: 4
+accum_iter: 2
+lr: 0.0003
+warmup_epochs: 5
+no_decay: false
+weight_decay: 0.05
+clip_grad: 1.0
+metrics:
+- acc
+- f1
+cv_metric: acc
+early_stopping: true
+amp: true
+device: cuda
+seed: 4466
+debug: false
+wandb: false
+wandb_entity: null
+wandb_project: fMRI-fm-eval
+model: schaefer400_mae
+dataset: aabc_sex
+distributed: false
+
+creating frozen backbone model: schaefer400_mae
+backbone:
+MaskedEncoderWrapper(
+  (model): MaskedEncoder(
+    class_token=True, reg_tokens=0, no_embed_class=True, mask_drop_scale=False
+    (patchify): Patchify3D((16, 400, 1), (4, 1, 1), in_chans=1)
+    (patch_embed): Linear(in_features=4, out_features=768, bias=True)
+    (pos_embed): SeparablePosEmbed(768, (4, 400, 1))
+    (blocks): ModuleList(
+      (0-11): 12 x Block(
+        (norm1): LayerNorm((768,), eps=1e-06, elementwise_affine=True)
+        (attn): Attention(
+          num_heads=12
+          (q): Linear(in_features=768, out_features=768, bias=True)
+          (k): Linear(in_features=768, out_features=768, bias=True)
+          (v): Linear(in_features=768, out_features=768, bias=True)
+          (proj): Linear(in_features=768, out_features=768, bias=True)
+        )
+        (drop_path1): Identity()
+        (norm2): LayerNorm((768,), eps=1e-06, elementwise_affine=True)
+        (mlp): Mlp(
+          (fc1): Linear(in_features=768, out_features=3072, bias=True)
+          (act): GELU(approximate='none')
+          (fc2): Linear(in_features=3072, out_features=768, bias=True)
+        )
+        (drop_path2): Identity()
+      )
+    )
+    (norm): LayerNorm((768,), eps=1e-06, elementwise_affine=True)
+  )
+)
+backbone params: 85.4M
+creating dataset: aabc_sex (schaefer400)
+train (n=471):
+HFDataset(
+    dataset=Dataset({
+    features: ['sub', 'visit', 'mod', 'task', 'path', 'start', 'end', 'tr', 'segment', 'bold', 'mean', 'std'],
+    num_rows: 471
+}),
+    labels=[0 1],
+    counts=[269 202]
+)
+
+validation (n=58):
+HFDataset(
+    dataset=Dataset({
+    features: ['sub', 'visit', 'mod', 'task', 'path', 'start', 'end', 'tr', 'segment', 'bold', 'mean', 'std'],
+    num_rows: 58
+}),
+    labels=[0 1],
+    counts=[36 22]
+)
+
+test (n=55):
+HFDataset(
+    dataset=Dataset({
+    features: ['sub', 'visit', 'mod', 'task', 'path', 'start', 'end', 'tr', 'segment', 'bold', 'mean', 'std'],
+    num_rows: 55
+}),
+    labels=[0 1],
+    counts=[33 22]
+)
+
+input size: [500, 400]
+total flops: 8062.1G
+benchmarking data loading
+load step 20/200 | 1467 samp/s | 1174 MB/s
+load step 40/200 | 1411 samp/s | 1129 MB/s
+load step 60/200 | 1393 samp/s | 1115 MB/s
+load step 80/200 | 1392 samp/s | 1114 MB/s
+load step 100/200 | 1388 samp/s | 1110 MB/s
+load step 120/200 | 623 samp/s | 498 MB/s
+load step 140/200 | 667 samp/s | 534 MB/s
+load step 160/200 | 699 samp/s | 560 MB/s
+load step 180/200 | 730 samp/s | 584 MB/s
+load step 200/200 | 759 samp/s | 607 MB/s
+benchmarking forward pass
+fwd step 20/200 | 37.2 sample/s | 300 Tflop/s
+fwd step 40/200 | 37.2 sample/s | 300 Tflop/s
+fwd step 60/200 | 37.1 sample/s | 299 Tflop/s
+fwd step 80/200 | 37.1 sample/s | 299 Tflop/s
+fwd step 100/200 | 37.1 sample/s | 299 Tflop/s
+fwd step 120/200 | 37.1 sample/s | 299 Tflop/s
+fwd step 140/200 | 37.1 sample/s | 299 Tflop/s
+fwd step 160/200 | 37.1 sample/s | 299 Tflop/s
+fwd step 180/200 | 37.1 sample/s | 299 Tflop/s
+fwd step 200/200 | 37.1 sample/s | 299 Tflop/s
+result:
+----
+{"model": "schaefer400_mae", "dataset": "aabc_sex", "input_shape": [500, 400], "params": 85370880, "gflop": 8062.129692672, "load_sps": 758.927791259234, "load_fps": 379463.89562961704, "load_mbs": 607.1422330073873, "fwd_sps": 37.06248927240383, "fwd_fps": 18531.244636201915, "fwd_tflops": 298.80259524738443}
