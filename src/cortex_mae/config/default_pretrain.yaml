@@ -1,11 +1,11 @@
 # Name of the run. For output directory base name and wandb.
-name: pretrain_mae
+name: pretrain
 
 # Description of the run. Goes in wandb notes.
 notes: null
 
 # Root output directory
-output_dir: checkpoints
+output_dir: output
 
 # Input fmri space
 # - flat: cortical flat map space, img_size [224, 560]
@@ -18,7 +18,7 @@ patch_size: 16
 
 # Temporal config.
 num_frames: 16
-t_patch_size: 16
+t_patch_size: 4
 
 # Mask ratio
 # note that the number of visible patches is computed as
@@ -46,7 +46,7 @@ pred_mask_ratio: null
 #   - null: uniform random masking
 #   - tube: patch tube masking, as in VideoMAE
 # Default is unconstrained uniform masking.
-masking: null
+masking: tube
 masking_kwargs: {}
 # optional to mask with larger patches, pixio style
 # should probably be multiple of original patch size
@@ -83,7 +83,7 @@ model_kwargs:
   # they are already position encoded from the encoder.
   # note this only applies when decoding = attn. for cross and crossreg, the embeddings
   # are never position encoded.
-  no_decode_pos: false
+  no_decode_pos: true
 
   # scale input patches by 1 / observed rate (like dropout)
   mask_drop_scale: false
@@ -101,10 +101,10 @@ model_kwargs:
   class_token: true
   reg_tokens: 0
   # don't add position to cls and reg tokens
-  no_embed_class: false
+  no_embed_class: true
 
   # scale factor for decoder head init
-  head_init_scale: null
+  head_init_scale: 0.0
 
   decoder_depth: 4
   drop_path_rate: 0.0
@@ -122,7 +122,7 @@ datasets:
       # sample more clips from each series, to saturate the data loader.
       oversample: 4.0
     shuffle: true
-    buffer_size: 1000
+    buffer_size: 2000
     samples_per_epoch: 200000
 
   hcp-train-subset:
@@ -218,7 +218,7 @@ max_checkpoints: 0
 checkpoint_period: null
 
 # how often to save plots
-plot_period: 1
+plot_period: 5
 
 device: cuda
 # presend data to cuda asynchronously
