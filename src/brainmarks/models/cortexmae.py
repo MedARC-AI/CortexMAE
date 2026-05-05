@@ -10,7 +10,9 @@ from brainmarks.models.base import Embeddings
 from brainmarks.models.registry import register_model
 
 import cortex_mae.models_mae as models_mae
+import cortex_mae.models_registry as models_registry
 import cortex_mae.transforms as flat_transforms
+from cortex_mae.models_registry import list_models  # noqa: F401
 
 
 class MaskedEncoderWrapper(nn.Module):
@@ -112,20 +114,6 @@ class Transform:
         sample["mask"] = sample["mask"].expand_as(sample["bold"])
         return sample
 
-    @staticmethod
-    def from_checkpoint(ckpt_path: str, no_coord_normalize: bool | None = None) -> "Transform":
-        ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=True)
-        args = ckpt["args"]
-        if no_coord_normalize is None:
-            no_coord_normalize = args.get("no_coord_normalize", False)
-        transform = Transform(
-            space=args["input_space"],
-            norm=args["normalize"],
-            clip_vmax=args["clip_vmax"],
-            no_coord_normalize=no_coord_normalize,
-        )
-        return transform
-
 
 def normalize(x: torch.Tensor, dim: int | None = None, eps: float = 1e-6) -> torch.Tensor:
     mean = x.mean(dim=dim, keepdim=True)
@@ -142,40 +130,17 @@ def resample_to_tr(x: Tensor, tr: float, target_tr: float, mode: str = "linear")
     return x
 
 
-# TODO: (maybe)
-#   - add random flat mae (call init_weights)
-#   - patch embed only (stripping off vit blocks)
-#   - extract features from different layer using feature extracton
-#     https://github.com/MedARC-AI/algonauts2025/blob/main/src/feature_extractor.py
-
-
 @register_model
-def cortex_mae_base_patch16_16(**kwargs) -> tuple[Transform, MaskedEncoderWrapper]:
-    transform = Transform()
-    model = models_mae.MaskedAutoencoderViT.from_pretrained("medarc/fm_mae_vit_base_patch16-16.hcp")
-    model = MaskedEncoderWrapper(model.encoder)
-    return transform, model
-
-
-@register_model
-def cortex_mae_base_patch16_2(**kwargs) -> tuple[Transform, MaskedEncoderWrapper]:
-    transform = Transform()
-    model = models_mae.MaskedAutoencoderViT.from_pretrained("medarc/fm_mae_vit_base_patch16-2.hcp")
-    model = MaskedEncoderWrapper(model.encoder)
-    return transform, model
-
-
-@register_model
-def cortex_mae(
+def fm_mae(
     *,
-    ckpt_path: str,
-    no_coord_normalize: bool | None = None,
+    t_patch_size: int = 2,
     scratch_init: bool = False,
     keep_blocks: int | None = None,
-    **kwargs,
 ) -> tuple[Transform, MaskedEncoderWrapper]:
-    transform = Transform.from_checkpoint(ckpt_path, no_coord_normalize=no_coord_normalize)
-    model = models_mae.MaskedAutoencoderViT.from_checkpoint(ckpt_path, **kwargs)
+    transform = Transform()
+    model = models_mae.MaskedAutoencoderViT.from_pretrained(
+        f"medarc/fm_mae_vit_base_patch16-{t_patch_size}.hcp"
+    )
     # re-init weights to train from scratch
     if scratch_init:
         model.init_weights()
@@ -187,44 +152,29 @@ def cortex_mae(
 
 
 @register_model
-def schaefer400_mae(
-    *, ckpt_path: str, no_coord_normalize: bool | None = None, **kwargs
+def cortex_mae(
+    *,
+    model_name: str = "cortex_mae_flat",
+    ckpt_path: str | None = None,
+    input_space: str | None = None,
+    scratch_init: bool = False,
+    keep_blocks: int | None = None,
 ) -> tuple[Transform, MaskedEncoderWrapper]:
-    transform = Transform.from_checkpoint(ckpt_path, no_coord_normalize=no_coord_normalize)
-    model = models_mae.MaskedAutoencoderViT.from_checkpoint(ckpt_path, **kwargs)
+    assert not ckpt_path or input_space, "input_space required if using a ckpt_path"
+
+    if ckpt_path is None:
+        ckpt_path = models_registry.CORTEX_MAE_MODEL_REGISTRY[model_name]
+        ckpt_path = f"{models_registry.HF_PREFIX}/{ckpt_path}"
+        input_space = models_registry.get_model_input_space(model_name)
+
+    transform = Transform(space=input_space)
+    model = models_mae.MaskedAutoencoderViT.from_checkpoint(ckpt_path)
+    # re-init weights to train from scratch
+    if scratch_init:
+        model.init_weights()
+    # remove some vit blocks (nb keep_blocks=0 is patch embed only)
+    if keep_blocks is not None:
+        model.encoder.blocks = model.encoder.blocks[:keep_blocks]
     model = MaskedEncoderWrapper(model.encoder)
-    model.__space__ = "schaefer400"
-    return transform, model
-
-
-@register_model
-def mni_cortex_mae(
-    *, ckpt_path: str, no_coord_normalize: bool | None = None, **kwargs
-) -> tuple[Transform, MaskedEncoderWrapper]:
-    transform = Transform.from_checkpoint(ckpt_path, no_coord_normalize=no_coord_normalize)
-    model = models_mae.MaskedAutoencoderViT.from_checkpoint(ckpt_path, **kwargs)
-    model = MaskedEncoderWrapper(model.encoder)
-    model.__space__ = "mni_cortex"
-    return transform, model
-
-
-@register_model
-def schaefer400_tians3_mae(
-    *, ckpt_path: str, no_coord_normalize: bool | None = None, **kwargs
-) -> tuple[Transform, MaskedEncoderWrapper]:
-    transform = Transform.from_checkpoint(ckpt_path, no_coord_normalize=no_coord_normalize)
-    model = models_mae.MaskedAutoencoderViT.from_checkpoint(ckpt_path, **kwargs)
-    model = MaskedEncoderWrapper(model.encoder)
-    model.__space__ = "schaefer400_tians3"
-    return transform, model
-
-
-@register_model
-def a424_mae(
-    *, ckpt_path: str, no_coord_normalize: bool | None = None, **kwargs
-) -> tuple[Transform, MaskedEncoderWrapper]:
-    transform = Transform.from_checkpoint(ckpt_path, no_coord_normalize=no_coord_normalize)
-    model = models_mae.MaskedAutoencoderViT.from_checkpoint(ckpt_path, **kwargs)
-    model = MaskedEncoderWrapper(model.encoder)
-    model.__space__ = "a424"
+    model.__space__ = input_space
     return transform, model
