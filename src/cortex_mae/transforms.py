@@ -421,13 +421,13 @@ class GrayJitter:
 def make_transform(
     space: Literal["flat", "schaefer400", "mni_cortex", "schaefer400_tians3", "a424"] = "flat",
     num_frames: int = 16,
-    normalize: Literal["global", "frame"] | None = None,
-    no_coord_normalize: bool = False,
+    normalize: Literal["global", "frame"] | None = "frame",
     clip_vmax: float | None = 3.0,
     tr_scale: float | None = None,
     crop_scale: float | None = None,
     crop_aspect: float | None = None,
     gray_jitter: float | None = None,
+    no_coord_normalize: bool = False,
 ) -> v2.Compose:
     assert crop_scale is None or space == "flat", "crop only supported for flat maps"
 

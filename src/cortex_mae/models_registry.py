@@ -82,7 +82,7 @@ CORTEX_MAE_MODEL_REGISTRY = {
 
 
 def create_model(
-    model_name: str, pretrained: bool = True, **kwargs
+    model_name: str = "cortex_mae_flat", pretrained: bool = True, **kwargs
 ) -> models_mae.MaskedAutoencoderViT:
     ckpt_path = CORTEX_MAE_MODEL_REGISTRY[model_name]
     ckpt_path = f"{HF_PREFIX}/{ckpt_path}"

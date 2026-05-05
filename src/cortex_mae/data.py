@@ -118,10 +118,14 @@ def extract_fmri_sample(sample: dict[str, Any]):
     # fMRI bold data, shape (T, D), dtype float16
     # z-scored per dimension
     bold = sample["bold.npy"]
-    mean = sample["mean.npy"]
-    std = sample["std.npy"]
-    # TODO: I changed the key from image -> bold. possibly a bad idea, now have to
-    # update everywhere and breaks compatibility.
+
+    # for loading hf data that don't include the mean and std
+    if "mean.npy" not in sample:
+        mean = np.zeros(bold.shape[1], dtype=np.float32)
+        std = np.ones(bold.shape[1], dtype=np.float32)
+    else:
+        mean = sample["mean.npy"]
+        std = sample["std.npy"]
     return {"meta": meta, "events": events, "bold": bold, "mean": mean, "std": std}
 
 
