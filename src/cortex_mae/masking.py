@@ -1,5 +1,3 @@
-# This source code is licensed under the Apache License, Version 2.0
-#
 # References:
 # capi: https://github.com/facebookresearch/capi/blob/main/data.py
 

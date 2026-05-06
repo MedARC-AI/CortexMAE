@@ -1,5 +1,3 @@
-# This source code is licensed under the Apache License, Version 2.0
-#
 # References:
 # deit: https://github.com/facebookresearch/deit/blob/main/utils.py
 # beit3: https://github.com/microsoft/unilm/blob/master/beit3/utils.py

@@ -1,7 +1,3 @@
-# Copyright (c) Sophont, Inc
-#
-# This source code is licensed under the Apache License, Version 2.0
-#
 # References:
 # capi: https://github.com/facebookresearch/capi/blob/main/model.py
 # timm: https://github.com/huggingface/pytorch-image-models/blob/v1.0.20/timm/models/vision_transformer.py
