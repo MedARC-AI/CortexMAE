@@ -1,5 +1,6 @@
 # CortexMAE
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/clane9/fmri-fm/blob/clean_release/notebooks/quickstart.ipynb)
 [![Preprint](https://img.shields.io/badge/arXiv-2510.13768-green?logo=bookstack&logoColor=white)](https://arxiv.org/abs/2510.13768)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
