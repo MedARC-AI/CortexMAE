@@ -99,7 +99,7 @@ class CortexMAE:
         self.mask_fn = mask_fn
 
     @staticmethod
-    def from_config(args: DictConfig) -> "CortexMAE":
+    def from_config(args: DictConfig, device: str | None = None) -> "CortexMAE":
         reader = get_reader(args.input_space)
         transform = Transform(
             args.input_space,
@@ -117,7 +117,7 @@ class CortexMAE:
             t_patch_size=args.t_patch_size,
         )
         model_fn = getattr(models_mae, args.model)
-        model: torch.nn.Module = model_fn(
+        backbone = model_fn(
             img_size=args.img_size,
             in_chans=args.in_chans,
             patch_size=args.patch_size,
@@ -125,34 +125,36 @@ class CortexMAE:
             t_patch_size=args.t_patch_size,
             **args.model_kwargs,
         )
-        model.eval()
+        backbone.eval()
         model = CortexMAE(
             args=args,
-            model=model,
+            model=backbone,
             reader=reader,
             transform=transform,
             mask_fn=mask_fn,
         )
+        model.set_device(device)
         return model
 
     @staticmethod
-    def from_checkpoint(ckpt_path: str) -> "CortexMAE":
+    def from_checkpoint(ckpt_path: str, device: str | None = None) -> "CortexMAE":
         ckpt_path = resolve_checkpoint(ckpt_path)
         ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=True)
         args = OmegaConf.create(ckpt["args"])
-        model = CortexMAE.from_config(args)
+        model = CortexMAE.from_config(args, device=device)
         model.model.load_state_dict(ckpt["model"])
         return model
 
     @staticmethod
-    def from_pretrained(model_name: str) -> "CortexMAE":
+    def from_pretrained(model_name: str, device: str | None = None) -> "CortexMAE":
         ckpt_path = CORTEX_MAE_MODEL_REGISTRY[model_name]
         ckpt_path = f"{HF_PREFIX}/{ckpt_path}"
-        return CortexMAE.from_checkpoint(ckpt_path)
+        return CortexMAE.from_checkpoint(ckpt_path, device=device)
 
-    def set_device(self, device: torch.device | None = None) -> "CortexMAE":
+    def set_device(self, device: str | torch.device | None = None) -> "CortexMAE":
         if device is None:
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+        device = torch.device(device)
         self.model.to(device)
         return self
 
