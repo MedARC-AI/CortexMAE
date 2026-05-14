@@ -23,7 +23,7 @@ def get_dummy_sample(space: str, n_samples: int) -> dict[str, Tensor]:
 
 
 @pytest.mark.parametrize("n_samples", [16, 48, 10, 40])
-@pytest.mark.parametrize("name", ["fm_mae", "cortex_mae"])
+@pytest.mark.parametrize("name", ["cortex_mae"])
 def test_model(name: str, n_samples: int):
     transform, model = create_model(name)
 

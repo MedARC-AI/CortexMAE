@@ -131,6 +131,9 @@ class FlatUnmask:
         mask = self.mask
         return {**sample, "bold": bold, "mask": mask}
 
+    def inverse(self, bold: torch.Tensor) -> torch.Tensor:
+        return bold[..., self.mask]
+
     def to_flat(self, bold: torch.Tensor) -> torch.Tensor:
         # just for consistency
         return bold
@@ -154,12 +157,15 @@ class ParcelUnmask:
         mask = torch.ones(D, 1, dtype=torch.bool)  # [D, 1] spatial mask only
         return {**sample, "bold": bold, "mask": mask}
 
-    def to_flat(self, bold: torch.Tensor) -> torch.Tensor:
-        # map parcellated values to flat map for visualization
-        # patches [N, P] -> vector [D]
+    def inverse(self, bold: torch.Tensor) -> torch.Tensor:
         *shape, D, _ = bold.shape
         assert D == self.dim, f"input dim {D} doesn't match expected {self.dim}"
         bold = bold.squeeze(-1)
+        return bold
+
+    def to_flat(self, bold: torch.Tensor) -> torch.Tensor:
+        # map parcellated values to flat map for visualization
+        bold = self.inverse(bold)
         # vector [D] -> surface [V]
         (V,) = self.parc.shape
         # parcellation codes 0 as background and 1-indexed rois

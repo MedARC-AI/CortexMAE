@@ -25,7 +25,7 @@ import scipy.interpolate
 import scipy.signal
 from matplotlib.tri import Triangulation
 from matplotlib.colors import LinearSegmentedColormap
-from nibabel.cifti2 import BrainModelAxis, Cifti2Image
+from nibabel.cifti2 import BrainModelAxis, Cifti2Image, SeriesAxis
 from nilearn.image import resample_img
 from scipy.sparse import coo_array
 from scipy.spatial import Delaunay
@@ -107,15 +107,13 @@ def get_cifti_surf_indices(cifti: Cifti2Image) -> tuple[np.ndarray, np.ndarray]:
 
 def get_cifti_struct_indices(cifti: Cifti2Image, struct: str) -> tuple[np.ndarray, np.ndarray]:
     axis = get_brain_model_axis(cifti)
-    for name, indices, model in axis.iter_structures():
+    full_indices = np.arange(cifti.shape[1])
+    for name, slc, model in axis.iter_structures():
         if name == struct:
-            assert np.all(model.vertex[:-1] <= model.vertex[1:]), (
-                f"cifti {struct=} indices not sorted"
-            )
             num_verts = model.vertex.max() + 1
             struct_mask = np.zeros(num_verts, dtype=bool)
             struct_mask[model.vertex] = True
-            indices = np.r_[indices]
+            indices = full_indices[slc]
             return indices, struct_mask
     raise ValueError(f"Invalid cifti struct {struct}")
 
@@ -140,6 +138,31 @@ def read_gifti_surf_data(path: str | Path) -> np.ndarray:
 
     series = np.concatenate([series_lh, series_rh], axis=1)
     return series
+
+
+def get_tr(path: str | Path) -> float:
+    """Get TR of a nifti or cifti time series."""
+    img = nib.load(path)
+
+    if isinstance(img, Cifti2Image):
+        for ii in range(img.ndim):
+            axis = img.header.get_axis(ii)
+            if isinstance(axis, SeriesAxis):
+                tr = float(axis.step)
+                unit = str(axis.unit).upper()
+                scale = {"SECOND": 1.0, "MILLISECOND": 1000.0}[unit]
+                tr = tr / scale
+                return tr
+        raise ValueError(f"No SeriesAxis found in cifti {path}")
+
+    if isinstance(img, (nib.Nifti1Image, nib.Nifti2Image)):
+        tr = float(img.header.get_zooms()[3])
+        _, unit = img.header.get_xyzt_units()
+        scale = {"sec": 1.0, "msec": 1000.0, "unknown": 1.0}[unit]
+        tr = tr / scale
+        return tr
+
+    raise ValueError(f"Unsupported image type {type(img).__name__}: {path}")
 
 
 MNI152_2MM_SHAPE = (91, 109, 91)
@@ -186,6 +209,46 @@ def ensure_mni152_2mm_ras(
         force_resample=True,
         copy_header=True,
     )
+    return img
+
+
+def make_cifti_fslr64k_img(series: np.ndarray, tr: float) -> nib.cifti2.Cifti2Image:
+    T, D = series.shape
+    assert D == FSLR64K_NUM_VERTICES, f"invalid series dim {D}"
+
+    template_path = fetch_schaefer(400, space="fslr64k")
+    template_img = nib.load(template_path)
+    axis = get_brain_model_axis(template_img)
+
+    series_axis = nib.cifti2.SeriesAxis(start=0.0, step=tr, size=T)
+    header = nib.cifti2.Cifti2Header.from_axes((series_axis, axis))
+    img = nib.cifti2.Cifti2Image(series, header=header)
+    return img
+
+
+def make_cifti_fslr91k_img(series: np.ndarray, tr: float) -> nib.cifti2.Cifti2Image:
+    T, D = series.shape
+    assert D == FSLR91K_NUM_VERTICES, f"invalid series dim {D}"
+
+    template_path = fetch_schaefer_tian(400, 3, space="fslr91k")
+    template_img = nib.load(template_path)
+    axis = get_brain_model_axis(template_img)
+
+    series_axis = nib.cifti2.SeriesAxis(start=0.0, step=tr, size=T)
+    header = nib.cifti2.Cifti2Header.from_axes((series_axis, axis))
+    img = nib.cifti2.Cifti2Image(series, header=header)
+    return img
+
+
+def make_mni152_img(data: np.ndarray, tr: float | None = None) -> nib.Nifti1Image:
+    data = data.T
+    assert data.shape[:3] == MNI152_2MM_SHAPE
+
+    img = nib.Nifti1Image(data, affine=MNI152_2MM_AFFINE)
+    if tr is not None:
+        assert data.ndim == 4
+        *zooms, _ = img.header.get_zooms()
+        img.header.set_zooms((*zooms, tr))
     return img
 
 

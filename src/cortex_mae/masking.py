@@ -58,8 +58,9 @@ class RandomMasking(nn.Module):
         self,
         img_mask: Float[Tensor, "H W"] | None = None,
         device: torch.device | None = None,
+        mask_ratio: float | None = None,
     ) -> Tensor:
-        # [B, C, H, W] or [B, C, T, H, W]
+        mask_ratio = self.mask_ratio if mask_ratio is None else mask_ratio
         if img_mask is None:
             img_mask = torch.ones((1, 1, *self.img_size), device=device)
         else:
@@ -70,7 +71,7 @@ class RandomMasking(nn.Module):
 
         mask_patches = self.patchify(img_mask)
         patch_mask = mask_patches.any(dim=-1).float()
-        patch_mask, _ = trim_patch_mask(patch_mask, mask_ratio=self.mask_ratio, shuffle=True)
+        patch_mask, _ = trim_patch_mask(patch_mask, mask_ratio=mask_ratio, shuffle=True)
         mask_patches = patch_mask.unsqueeze(-1).expand(-1, -1, mask_patches.shape[-1])
         mask = self.patchify.unpatchify(mask_patches)
 

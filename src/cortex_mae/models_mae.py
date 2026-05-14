@@ -20,7 +20,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch import Tensor
-from huggingface_hub import PyTorchModelHubMixin, hf_hub_download
+from huggingface_hub import PyTorchModelHubMixin
 from jaxtyping import Float, Int
 from timm.layers import to_2tuple, to_ntuple
 
@@ -768,6 +768,7 @@ class MaskedAutoencoderViT(nn.Module, PyTorchModelHubMixin):
 
         state = {
             "images": images,
+            "img_mask": img_mask,
             "targets": targets,
             "targets_patches": targets_patches,
             "targets_stats": targets_stats,
@@ -793,7 +794,6 @@ class MaskedAutoencoderViT(nn.Module, PyTorchModelHubMixin):
 
     @staticmethod
     def from_checkpoint(ckpt_path: str, **kwargs) -> "MaskedAutoencoderViT":
-        ckpt_path = _resolve_checkpoint(ckpt_path)
         ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=True)
         args = ckpt["args"]
         model_kwargs = {
@@ -881,14 +881,6 @@ def _init_weights(m: nn.Module) -> None:
         nn.init.constant_(m.weight, 1.0)
         if m.bias is not None:
             nn.init.constant_(m.bias, 0)
-
-
-def _resolve_checkpoint(path: str) -> str:
-    path = str(path)
-    if path.startswith("hf://"):
-        namespace, repo, filename = path[len("hf://") :].split("/", 2)
-        return hf_hub_download(repo_id=f"{namespace}/{repo}", filename=filename)
-    return path
 
 
 def flat_pca_normalize(
