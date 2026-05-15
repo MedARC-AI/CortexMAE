@@ -99,10 +99,6 @@ class TubeMasking(RandomMasking):
         super().__init__(mask_ratio=mask_ratio, img_size=img_size, patch_size=patch_size)
 
 
-# TODO:
-# - inverse block masking
-
-
 MASKING_DICT = {
     "random": RandomMasking,
     "tube": TubeMasking,

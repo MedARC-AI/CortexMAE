@@ -141,8 +141,6 @@ datasets:
     split_range: [0, 2000]
     shuffle: false
 
-  # TODO: nsd-val, ukbb-val
-
 # which datasets to include
 train_dataset: hcp-train
 eval_datasets:

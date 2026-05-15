@@ -601,7 +601,7 @@ def make_plots(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--cfg-path", type=str, default=None)
+    parser.add_argument("--config", type=str, default=None)
     parser.add_argument("--overrides", type=str, default=None, nargs="+")
     args = parser.parse_args()
     cfg = OmegaConf.load(DEFAULT_CONFIG)
