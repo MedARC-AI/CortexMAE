@@ -17,14 +17,14 @@ CortexMAE is an fMRI foundation model trained on 2.1K hours of fMRI data from th
 ## Installation
 
 ```bash
-uv pip install "cortexmae @ git+https://github.com/MedARC-AI/cortexmae.git"
+uv pip install "cortex_mae @ git+https://github.com/MedARC-AI/CortexMAE.git"
 ```
 
 Or clone the repo and install locally
 
 ```bash
-git clone https://github.com/MedARC-AI/cortexmae
-cd cortexmae
+git clone https://github.com/MedARC-AI/CortexMAE.git
+cd CortexMAE
 uv sync --python 3.11
 ```
 
@@ -106,9 +106,7 @@ Probe evaluation uses [Brainmarks](https://github.com/MedARC-AI/Brainmarks). The
 `cortex_mae`:
 
 ```bash
-uv run python -m brainmarks.main_probe cortex_mae patch attn nsd_cococlip \
-  --overrides \
-  model_kwargs.model_name=cortex_mae_flat
+uv run python -m brainmarks.main_probe cortex_mae patch attn nsd_cococlip
 ```
 
 ## License

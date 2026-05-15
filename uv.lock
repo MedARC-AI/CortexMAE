@@ -734,7 +734,7 @@ wheels = [
 ]
 
 [[package]]
-name = "cortexmae"
+name = "cortex-mae"
 source = { editable = "." }
 dependencies = [
     { name = "brainmarks" },

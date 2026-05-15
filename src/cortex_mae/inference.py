@@ -22,7 +22,7 @@ import cortex_mae.nisc as nisc
 import cortex_mae.transforms as transforms
 import cortex_mae.masking as masking
 
-CACHE_DIR = platformdirs.user_cache_path("cortexmae")
+CACHE_DIR = platformdirs.user_cache_path("cortex_mae")
 
 
 class EmbeddingOutput(NamedTuple):
@@ -169,7 +169,7 @@ class CortexMAE:
         tr: float | None = None,
     ) -> dict[str, Tensor]:
         if isinstance(input, (str, Path)):
-            with tempfile.TemporaryDirectory(prefix="cortexmae-") as tmpdir:
+            with tempfile.TemporaryDirectory(prefix="cortex_mae-") as tmpdir:
                 path = resolve_file(input, cache_dir=tmpdir)
                 sample = read_sample(self.reader, path, tr=tr)
         elif isinstance(input, dict):
