@@ -792,7 +792,7 @@ requires-dist = [
     { name = "scikit-learn" },
     { name = "scipy" },
     { name = "timm" },
-    { name = "torch", specifier = "==2.8.0" },
+    { name = "torch", specifier = ">=2.8.0,<2.13.0" },
     { name = "torchvision" },
     { name = "tqdm" },
     { name = "wandb" },
