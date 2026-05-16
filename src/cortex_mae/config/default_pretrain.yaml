@@ -10,7 +10,10 @@ output_dir: output
 # Input fmri space
 # - flat: cortical flat map space, img_size [224, 560]
 # - schaefer400: parcellated space, img_size [400, 1]
-# - mni_cortex: sparse mni cortex space, img_size [383, 512]
+# - mni_cortex: sparse mni cortex space, img_size [465, 512]
+# - schaefer400_tians3: parcellated space with subcortex, img_size [450, 1]
+# - a424: parcellated space with subcortex and cerebellum, img_size [424, 1]
+# - schaefer1000: dense parcellated space, img_size [1000, 1]
 input_space: flat
 
 # Spatial patch size (only used for flat maps, others have hard-coded patch size)
@@ -45,7 +48,7 @@ pred_mask_ratio: null
 # Constraints for the visible mask:
 #   - null: uniform random masking
 #   - tube: patch tube masking, as in VideoMAE
-# Default is unconstrained uniform masking.
+# Default is tube masking to prevent interpolation across time.
 masking: tube
 masking_kwargs: {}
 # optional to mask with larger patches, pixio style
@@ -53,7 +56,12 @@ masking_kwargs: {}
 mask_patch_size: null
 
 # Model
+# available models:
+# - mae_vit_{small,base}: standard ViT sizes
+# - mae_vit_d{3,6,9,12,15}: varying depth models with proportions equal to default ViT-B. (nb, d12 = vit_base)
+# see models_mae.py for more details
 model: mae_vit_base
+
 model_kwargs:
   # decoding mode:
   #   - attn: standard self-attention decoding as in original MAE(-st)
@@ -86,11 +94,11 @@ model_kwargs:
   no_decode_pos: true
 
   # scale input patches by 1 / observed rate (like dropout)
+  # (doesn't seem to make much difference)
   mask_drop_scale: false
 
   # don't predict pixels along the edges of the visible mask.
-  # not from MAE but something I've wanted to try out due to observed interpolation
-  # across patch edges
+  # aka "decoder edge masking". prevents interpolation across patch edges.
   pred_edge_pad: 0
 
   # input gaussian noise sigma (applied during training only)
@@ -99,14 +107,19 @@ model_kwargs:
   gauss_sigma: null
 
   class_token: true
+  # extra register tokens for encoder, following "ViTs need registers"
   reg_tokens: 0
   # don't add position to cls and reg tokens
   no_embed_class: true
 
   # scale factor for decoder head init
+  # prevents huge initial loss and gradient
+  # cf the original ViT zero-init of the head
   head_init_scale: 0.0
 
+  # nb, ignored by mae_vit_d* models which fix encoder-decoder depth ratio
   decoder_depth: 4
+
   drop_path_rate: 0.0
 
 # Datasets
@@ -116,6 +129,7 @@ datasets:
     # hcpya-all contains 2000 shards, split into 20 batches of unrelated subjects.
     # train on first 18 batches.
     # note: we use omegaconf string interpolation to get the correct paths
+    # (you can also download locally and use a local path)
     url: pipe:aws s3 cp s3://medarc/fmri-datasets/pretrain/hcpya-all.${input_space}.wds/hcpya-all-${input_space}-{00000..01799}.tar -
     clipping: random
     clipping_kwargs:
@@ -125,6 +139,7 @@ datasets:
     buffer_size: 2000
     samples_per_epoch: 200000
 
+  # these s3 datasets are cached by hf on first download
   hcp-train-subset:
     type: arrow
     # note choice of validation split here and test below. this is confusing but not a mistake.
@@ -141,11 +156,18 @@ datasets:
     split_range: [0, 2000]
     shuffle: false
 
+  nsd-val:
+    type: arrow
+    root: s3://medarc/fmri-datasets/eval/nsd-cococlip.${input_space}.arrow/testid
+    split_range: [0, 2000]
+    shuffle: false
+
 # which datasets to include
 train_dataset: hcp-train
 eval_datasets:
   - hcp-train-subset
   - hcp-val
+  - nsd-val
 # dataset to use for saving the best checkpoint
 # if null, then no best checkpoints are saved
 val_dataset: null
@@ -163,6 +185,14 @@ clip_vmax: 3.0
 # each clip is one way to try to get the model to focus on more interesting local
 # activity variation.
 normalize: frame
+
+# augmentations
+# settings from the ablation in the paper:
+# - tr scale: tr_scale=0.8
+# - weak crop: crop_scale=0.8 crop_aspect=1.0
+# - strong crop: crop_scale=0.5 crop_aspect=0.8
+# - jitter: gray_jitter=0.2
+# none of them really did much, except maybe tr_scale
 
 # variable tr scale
 # during training, data are temporally random resize cropped so that the observed tr is
@@ -198,6 +228,7 @@ betas: [0.9, 0.95]
 clip_grad: 1.0
 
 amp: true
+# nb, bfloat16 was unstable. esp without head_init_scale=0.0
 amp_dtype: float16
 
 # Checkpoint to use for init
@@ -211,7 +242,7 @@ auto_resume: true
 start_epoch: 0
 
 # The last checkpoint is always saved, this controls how many extra are kept
-# By default only keep the last checkpoint
+# By default (checkpoint_period=null) only keep the last checkpoint, no intermediates
 max_checkpoints: 0
 checkpoint_period: null
 
