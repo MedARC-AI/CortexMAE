@@ -605,8 +605,8 @@ if __name__ == "__main__":
     parser.add_argument("--overrides", type=str, default=None, nargs="+")
     args = parser.parse_args()
     cfg = OmegaConf.load(DEFAULT_CONFIG)
-    if args.cfg_path:
-        cfg = OmegaConf.unsafe_merge(cfg, OmegaConf.load(args.cfg_path))
+    if args.config:
+        cfg = OmegaConf.unsafe_merge(cfg, OmegaConf.load(args.config))
     if args.overrides:
         cfg = OmegaConf.unsafe_merge(cfg, OmegaConf.from_dotlist(args.overrides))
     main(cfg)
