@@ -4,7 +4,7 @@ import platformdirs
 import fsspec
 import shutil
 import tempfile
-from functools import cache
+from functools import cache, partial
 from pathlib import Path
 from typing import Literal, NamedTuple, Protocol
 
@@ -21,6 +21,7 @@ import cortex_mae.models_mae as models_mae
 import cortex_mae.nisc as nisc
 import cortex_mae.transforms as transforms
 import cortex_mae.masking as masking
+import cortex_mae.visualization as vis
 
 CACHE_DIR = platformdirs.user_cache_path("cortex_mae")
 
@@ -361,6 +362,33 @@ class CortexMAE:
 
         return DenoisingOutput(**state)
 
+    def plot_masked_recon(
+        self,
+        recons: ReconstructionOutput,
+        clip_idx: int = 0,
+        num_frames: int = 8,
+        stride: int = 2,
+        with_t_label: bool = True,
+        with_row_label: bool = True,
+    ):
+        plot_state = {
+            "image": recons.images,
+            "pred": recons.pred_images,
+            "visible_mask": recons.visible_mask,
+            "img_mask": recons.img_mask,
+        }
+        for key, values in plot_state.items():
+            if values is not None:
+                # [N, 1, T, H, W] -> [T, H, W]
+                values = values[clip_idx, 0, : num_frames * stride : stride]
+                values = self.transform.unmask.to_flat(values)
+                plot_state[key] = values.numpy()
+
+        fig = vis.plot_mask_pred_row(
+            **plot_state, with_t_label=with_t_label, tr=stride, with_row_label=with_row_label
+        )
+        return fig
+
 
 def iter_batches(
     bold: Tensor,
@@ -587,6 +615,7 @@ def get_reader(space: str = "flat") -> Reader:
         "mni_cortex": MNICortexReader,
         "schaefer400_tians3": SchaeferTianReader,
         "a424": A424Reader,
+        "schaefer1000": partial(SchaeferReader, num_rois=1000),
     }[space]
     reader = reader_cls()
     return reader
