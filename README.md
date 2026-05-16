@@ -33,12 +33,11 @@ uv sync --python 3.11
 Load a pretrained model and compute embeddings on a preprocessed fMRI time series from OpenNeuro:
 
 ```python
-import cortex_mae
-from cortex_mae import CortexMAE
+from cortex_mae import CortexMAE, resolve_file
 
 model = CortexMAE.from_pretrained("cortex_mae_flat")
 
-path = cortex_mae.resolve_file(
+path = resolve_file(
   "s3://openneuro.org/ds006072/NON_BIDS/ciftis/sub-1_Drug2_rsfMRI_uout_bpss_sr_noGSR_sm4.dtseries.nii",
   anon=True,
 )
@@ -62,6 +61,7 @@ as well as >50 ablation variants covering data scale, model scale, alternative p
 
 ```python
 model = CortexMAE.from_pretrained("cortex_mae_flat")     # default
+model = CortexMAE.from_pretrained("cortex_mae_flat_r2")  # repeat with new seed
 model = CortexMAE.from_pretrained("cortex_mae_flat_d6")  # depth-6 model
 ```
 
@@ -102,21 +102,35 @@ See the default config [src/cortex_mae/config/default_pretrain.yaml](src/cortex_
 
 ## Downstream evaluation
 
-Probe evaluation uses [Brainmarks](https://github.com/MedARC-AI/Brainmarks). The CortexMAE encoder is registered as
-`cortex_mae`:
+Probe evaluation uses [Brainmarks](https://github.com/MedARC-AI/Brainmarks). The CortexMAE encoders are registered as `cortex_mae_{parcel,flat,volume}`:
 
 ```bash
-uv run python -m brainmarks.main_probe cortex_mae patch attn nsd_cococlip
+uv run python -m brainmarks.main_probe cortex_mae_flat patch attn nsd_cococlip
+```
+
+To evaluate a different model variant:
+
+```bash
+uv run python -m brainmarks.main_probe cortex_mae_flat patch attn nsd_cococlip \
+    --overrides model_kwargs.variant=d6
+```
+
+To see a list of all variants:
+
+```python
+from brainmarks.models.cortex_mae_wrapper import list_variants
+
+print(list_variants("cortex_mae_flat"))
 ```
 
 ## License
 
-Code is released under the Apache License 2.0 (see [LICENSE](LICENSE)). Model weights are relased under CC-BY-NC (see [LICENSE.models](LICENSE.models)).
+Code is released under the Apache License 2.0 ([LICENSE](LICENSE)). Model weights are relased under CC-BY-NC 4.0 ([LICENSE.models](LICENSE.models)).
 
 ## Citation
 
 ```bibtex
-@article{cortexmae,
+@article{lane2025scaling,
   title   = {Scaling Vision Transformers for Functional {MRI} with Flat Maps},
   author  = {Lane, Connor and Tripathy, Mihir and Murali, Leema Krishna and
              Grandhi, Ratna Sagari and Yang, Shamus Sim Zi and Gijsen, Sam and

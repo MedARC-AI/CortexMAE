@@ -684,16 +684,8 @@ CORTEX_MAE_MODEL_REGISTRY = {
     "cortex_mae_parcel_r6": "input_space_v3/schaefer400_lr3e-4_6/pretrain/checkpoint-last.pth",
     "cortex_mae_parcel_r7": "input_space_v3/schaefer400_lr3e-4_7/pretrain/checkpoint-last.pth",
     "cortex_mae_parcel_r8": "input_space_v3/schaefer400_lr3e-4_8/pretrain/checkpoint-last.pth",
-    # subcortical
-    "cortex_mae_a424": "subcortical/a424_lr3e-4_1/pretrain/checkpoint-last.pth",
-    "cortex_mae_a424_r2": "subcortical/a424_lr3e-4_2/pretrain/checkpoint-last.pth",
-    "cortex_mae_a424_r3": "subcortical/a424_lr3e-4_3/pretrain/checkpoint-last.pth",
-    "cortex_mae_a424_r4": "subcortical/a424_lr3e-4_4/pretrain/checkpoint-last.pth",
-    "cortex_mae_s400ts3": "subcortical/schaefer400_tians3_lr3e-4_1/pretrain/checkpoint-last.pth",
-    "cortex_mae_s400ts3_r2": "subcortical/schaefer400_tians3_lr3e-4_2/pretrain/checkpoint-last.pth",
-    "cortex_mae_s400ts3_r3": "subcortical/schaefer400_tians3_lr3e-4_3/pretrain/checkpoint-last.pth",
-    "cortex_mae_s400ts3_r4": "subcortical/schaefer400_tians3_lr3e-4_4/pretrain/checkpoint-last.pth",
     # data scaling
+    # nb these use best checkpoints bc small datasets overfit early
     "cortex_mae_flat_n100": "data_scaling/n100_1/pretrain/checkpoint-best.pth",
     "cortex_mae_flat_n100_r2": "data_scaling/n100_2/pretrain/checkpoint-best.pth",
     "cortex_mae_flat_n200": "data_scaling/n200_1/pretrain/checkpoint-best.pth",
@@ -724,16 +716,31 @@ CORTEX_MAE_MODEL_REGISTRY = {
     # spatial patch size
     "cortex_mae_flat_p8": "patch_size/patch8/pretrain/checkpoint-last.pth",
     # denoising model
+    # trained with decoder edge masking, i.e. pred_edge_pad=4
     "cortex_mae_flat_denoise": "decoders/attn_reg1_pep4/pretrain/checkpoint-last.pth",
     # cross-register decoding
     "cortex_mae_flat_crossreg1": "decoders/crossreg_reg1/pretrain/checkpoint-last.pth",
     "cortex_mae_flat_crossreg4": "decoders/crossreg_reg4/pretrain/checkpoint-last.pth",
     "cortex_mae_flat_crossreg16": "decoders/crossreg_reg16/pretrain/checkpoint-last.pth",
-    # training data
+    # rest vs task pretraining data
     "cortex_mae_flat_rest": "rest_v_task/rest_ep50_1/pretrain/checkpoint-last.pth",
     "cortex_mae_flat_rest_r2": "rest_v_task/rest_ep50_2/pretrain/checkpoint-last.pth",
     "cortex_mae_flat_task": "rest_v_task/task_ep50_1/pretrain/checkpoint-last.pth",
     "cortex_mae_flat_task_r2": "rest_v_task/task_ep50_2/pretrain/checkpoint-last.pth",
+    # subcortical
+    "cortex_mae_parcel_a424": "subcortical/a424_lr3e-4_1/pretrain/checkpoint-last.pth",
+    "cortex_mae_parcel_a424_r2": "subcortical/a424_lr3e-4_2/pretrain/checkpoint-last.pth",
+    "cortex_mae_parcel_a424_r3": "subcortical/a424_lr3e-4_3/pretrain/checkpoint-last.pth",
+    "cortex_mae_parcel_a424_r4": "subcortical/a424_lr3e-4_4/pretrain/checkpoint-last.pth",
+    "cortex_mae_parcel_s400ts3": "subcortical/schaefer400_tians3_lr3e-4_1/pretrain/checkpoint-last.pth",
+    "cortex_mae_parcel_s400ts3_r2": "subcortical/schaefer400_tians3_lr3e-4_2/pretrain/checkpoint-last.pth",
+    "cortex_mae_parcel_s400ts3_r3": "subcortical/schaefer400_tians3_lr3e-4_3/pretrain/checkpoint-last.pth",
+    "cortex_mae_parcel_s400ts3_r4": "subcortical/schaefer400_tians3_lr3e-4_4/pretrain/checkpoint-last.pth",
+    # dense parcellation, schaefer 1000
+    "cortex_mae_parcel_s1000": "schaefer1000/schaefer1000_lr3e-4_1/pretrain/checkpoint-last.pth",
+    "cortex_mae_parcel_s1000_r2": "schaefer1000/schaefer1000_lr3e-4_2/pretrain/checkpoint-last.pth",
+    "cortex_mae_parcel_s1000_r3": "schaefer1000/schaefer1000_lr3e-4_3/pretrain/checkpoint-last.pth",
+    "cortex_mae_parcel_s1000_r4": "schaefer1000/schaefer1000_lr3e-4_4/pretrain/checkpoint-last.pth",
 }
 
 

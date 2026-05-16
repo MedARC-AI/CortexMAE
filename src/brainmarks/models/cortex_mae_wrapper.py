@@ -6,7 +6,7 @@ from brainmarks.models.base import Embeddings
 from brainmarks.models.registry import register_model
 
 import cortex_mae.models_mae as models_mae
-from cortex_mae.inference import CortexMAE, Transform, pad_unfold
+from cortex_mae.inference import CortexMAE, Transform, pad_unfold, list_models
 
 
 class CortexMAEWrapper(nn.Module):
@@ -66,3 +66,53 @@ def cortex_mae(
     model = CortexMAEWrapper(encoder)
     model.__space__ = input_space
     return transform, model
+
+
+def _resolve_variant(prefix: str, variant: str | None) -> str:
+    if not variant:
+        return prefix
+    model_name = f"{prefix}_{variant}"
+    if model_name not in set(list_models()):
+        raise ValueError(
+            f"unknown variant {variant!r} for {prefix!r}; "
+            f"available variants: {list_variants(prefix)}"
+        )
+    return model_name
+
+
+@register_model
+def cortex_mae_parcel(
+    *,
+    variant: str | None = None,
+    scratch_init: bool = False,
+    keep_blocks: int | None = None,
+) -> tuple[Transform, CortexMAEWrapper]:
+    model_name = _resolve_variant("cortex_mae_parcel", variant)
+    return cortex_mae(model_name=model_name, scratch_init=scratch_init, keep_blocks=keep_blocks)
+
+
+@register_model
+def cortex_mae_flat(
+    *,
+    variant: str | None = None,
+    scratch_init: bool = False,
+    keep_blocks: int | None = None,
+) -> tuple[Transform, CortexMAEWrapper]:
+    model_name = _resolve_variant("cortex_mae_flat", variant)
+    return cortex_mae(model_name=model_name, scratch_init=scratch_init, keep_blocks=keep_blocks)
+
+
+@register_model
+def cortex_mae_volume(
+    *,
+    variant: str | None = None,
+    scratch_init: bool = False,
+    keep_blocks: int | None = None,
+) -> tuple[Transform, CortexMAEWrapper]:
+    model_name = _resolve_variant("cortex_mae_volume", variant)
+    return cortex_mae(model_name=model_name, scratch_init=scratch_init, keep_blocks=keep_blocks)
+
+
+def list_variants(prefix: str = "cortex_mae_flat") -> list[str]:
+    variants = [name[len(prefix) + 1 :] for name in list_models() if name.startswith(f"{prefix}_")]
+    return variants
