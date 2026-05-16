@@ -1,9 +1,6 @@
 import inspect
 import os
-import subprocess
 from glob import glob
-from pathlib import Path
-from urllib.parse import urlparse
 from typing import Any, Callable, Iterable, Literal
 
 import braceexpand
@@ -83,24 +80,6 @@ def warn_and_continue(exn):
     # originate in a child data loader worker process.
     print(f"WARNING {repr(exn)}")
     return True
-
-
-def maybe_download(url: str, cache_dir: str | Path | None = None) -> str:
-    cache_dir = Path(cache_dir or DATA_CACHE_DIR)
-    cache_dir.mkdir(exist_ok=True)
-
-    parsed = urlparse(url)
-    # NOTE: previously we also downloaded hf urls, but we can delegate this to hf
-    # load_dataset itself.
-    if parsed.scheme == "s3":
-        local_path = str(Path(cache_dir) / parsed.path.removeprefix("/"))
-        print(f"downloading {url} -> {local_path}")
-        # TODO: is this the best way to download from s3?
-        # it's faster at least than letting hf download
-        subprocess.run(["aws", "s3", "sync", "--quiet", str(url), str(local_path)], check=True)
-    else:
-        local_path = url
-    return local_path
 
 
 def extract_fmri_sample(sample: dict[str, Any]):
