@@ -11,6 +11,11 @@ _version.py
 # IDE
 .vscode/
 
+# Agents
+.claude/
+.codex/
+CLAUDE.md
+
 # Virtual environment
 .venv/
 .python-version
@@ -28,8 +33,13 @@ checkpoints
 wandb
 jobs
 output
+slurm-*
+experiments/**/data
 
 # Local scratch/tmp
 .scratch
 tmp
 .tmp*
+
+# Misc
+.DS_Store

@@ -1,0 +1,261 @@
+# Name of the run. For output directory base name and wandb.
+name: pretrain
+
+# Description of the run. Goes in wandb notes.
+notes: null
+
+# Root output directory
+output_dir: output
+
+# Input fmri space
+# - flat: cortical flat map space, img_size [224, 560]
+# - schaefer400: parcellated space, img_size [400, 1]
+# - mni_cortex: sparse mni cortex space, img_size [465, 512]
+# - schaefer400_tians3: parcellated space with subcortex, img_size [450, 1]
+# - a424: parcellated space with subcortex and cerebellum, img_size [424, 1]
+# - schaefer1000: dense parcellated space, img_size [1000, 1]
+input_space: flat
+
+# Spatial patch size (only used for flat maps, others have hard-coded patch size)
+patch_size: 16
+
+# Temporal config.
+num_frames: 16
+t_patch_size: 4
+
+# Mask ratio
+# note that the number of visible patches is computed as
+#   len_keep = (T // t) * (H // h) * (W // w) * (1 - mask_ratio)
+# where (T, H, W) is the clip size and (t, h, w) is the patch size.
+#
+# so for image size (224, 560) we get the following patches per frame:
+#   - 0.75:  122
+#   - 0.804: 96
+#   - 0.869: 64
+#   - 0.9:   48
+#   - 0.96:  19
+#
+# for comparison, original MAE was trained with 0.75 on 224 x 224 (49 patches), while
+# MAE-st was trained with 0.9 (19 patches)
+mask_ratio: 0.9
+
+# decoder mask ratio for VideoMAEv2 style sparse decoding.
+# the number of predicted patches is computed relative to the full image, same as
+# mask_ratio. so you need at least pred_mask_ratio > (1 - mask_ratio) to do any sparse
+# prediction.
+pred_mask_ratio: null
+
+# Constraints for the visible mask:
+#   - null: uniform random masking
+#   - tube: patch tube masking, as in VideoMAE
+# Default is tube masking to prevent interpolation across time.
+masking: tube
+masking_kwargs: {}
+# optional to mask with larger patches, pixio style
+# should probably be multiple of original patch size
+mask_patch_size: null
+
+# Model
+# available models:
+# - mae_vit_{small,base}: standard ViT sizes
+# - mae_vit_d{3,6,9,12,15}: varying depth models with proportions equal to default ViT-B. (nb, d12 = vit_base)
+# see models_mae.py for more details
+model: mae_vit_base
+
+model_kwargs:
+  # decoding mode:
+  #   - attn: standard self-attention decoding as in original MAE(-st)
+  #   - cross: cross-attention decoding as in CrossMAE
+  #   - crossreg: cross-register decoding inspired by MAETok
+  decoding: attn
+
+  # position embedding:
+  #   - abs: absolute learned position embedding
+  #   - sep: separable learned position embedding for time and space from MAE-st
+  #   - sincos: fixed sin-cos position encoding
+  pos_embed: sep
+
+  # target normalization:
+  #   - patch: normalize for each patch (same as MAE pix norm loss)
+  #   - pca: subtract reconstruction from pca (cf connectome caricatures). only for flat maps.
+  target_norm: null
+  # number of pca components to remove, up to 8.
+  pca_norm_nc: 2
+
+  # decoder prediction frame stride from MAE-st. i.e. stride = 2 means predict every
+  # other frame starting from frame 0.
+  t_pred_stride: 2
+
+  # don't add position encoding to the embeddings for the decoder.
+  # original MAE does position encode the embeddings, but it might not be needed since
+  # they are already position encoded from the encoder.
+  # note this only applies when decoding = attn. for cross and crossreg, the embeddings
+  # are never position encoded.
+  no_decode_pos: true
+
+  # scale input patches by 1 / observed rate (like dropout)
+  # (doesn't seem to make much difference)
+  mask_drop_scale: false
+
+  # don't predict pixels along the edges of the visible mask.
+  # aka "decoder edge masking". prevents interpolation across patch edges.
+  pred_edge_pad: 0
+
+  # input gaussian noise sigma (applied during training only)
+  # mixes input with noise: (1-t)*x + t*z where t ~ [0, sigma]
+  # targets stay clean
+  gauss_sigma: null
+
+  class_token: true
+  # extra register tokens for encoder, following "ViTs need registers"
+  reg_tokens: 0
+  # don't add position to cls and reg tokens
+  no_embed_class: true
+
+  # scale factor for decoder head init
+  # prevents huge initial loss and gradient
+  # cf the original ViT zero-init of the head
+  head_init_scale: 0.0
+
+  # nb, ignored by mae_vit_d* models which fix encoder-decoder depth ratio
+  decoder_depth: 4
+
+  drop_path_rate: 0.0
+
+# Datasets
+datasets:
+  hcp-train:
+    type: wds
+    # hcpya-all contains 2000 shards, split into 20 batches of unrelated subjects.
+    # train on first 18 batches.
+    # note: we use omegaconf string interpolation to get the correct paths
+    # (you can also download locally and use a local path)
+    url: pipe:aws s3 cp s3://medarc/fmri-datasets/pretrain/hcpya-all.${input_space}.wds/hcpya-all-${input_space}-{00000..01799}.tar -
+    clipping: random
+    clipping_kwargs:
+      # sample more clips from each series, to saturate the data loader.
+      oversample: 4.0
+    shuffle: true
+    buffer_size: 2000
+    samples_per_epoch: 200000
+
+  # these s3 datasets are cached by hf on first download
+  hcp-train-subset:
+    type: arrow
+    # note choice of validation split here and test below. this is confusing but not a mistake.
+    # validation includes batches [16, 17] which are part of training set, while test
+    # includes [18, 19] which are not. (note also, batches are [0, ..., 19]). we keep
+    # the names here as train-subset and val for consistency with earlier runs.
+    root: s3://medarc/fmri-datasets/eval/hcpya-clips.${input_space}.arrow/validation
+    split_range: [0, 2000]
+    shuffle: false
+
+  hcp-val:
+    type: arrow
+    root: s3://medarc/fmri-datasets/eval/hcpya-clips.${input_space}.arrow/test
+    split_range: [0, 2000]
+    shuffle: false
+
+  nsd-val:
+    type: arrow
+    root: s3://medarc/fmri-datasets/eval/nsd-cococlip.${input_space}.arrow/testid
+    split_range: [0, 2000]
+    shuffle: false
+
+# which datasets to include
+train_dataset: hcp-train
+eval_datasets:
+  - hcp-train-subset
+  - hcp-val
+  - nsd-val
+# dataset to use for saving the best checkpoint
+# if null, then no best checkpoints are saved
+val_dataset: null
+
+# Data transform
+# clip extreme values to [-vmax, vmax]. note that during flat dataset generation, each
+# vertex time series is z-scored for each run. so values should be in normal range.
+clip_vmax: 3.0
+
+# normalize each video clip.
+#   - null: no normalization
+#   - global: the clip is globally normalized to mean zero unit variance.
+#   - frame: each temporal frame is independently normalized.
+# fMRI data have a lot of slow global variation (i.e. the "global signal"). z-scoring
+# each clip is one way to try to get the model to focus on more interesting local
+# activity variation.
+normalize: frame
+
+# augmentations
+# settings from the ablation in the paper:
+# - tr scale: tr_scale=0.8
+# - weak crop: crop_scale=0.8 crop_aspect=1.0
+# - strong crop: crop_scale=0.5 crop_aspect=0.8
+# - jitter: gray_jitter=0.2
+# none of them really did much, except maybe tr_scale
+
+# variable tr scale
+# during training, data are temporally random resize cropped so that the observed tr is
+# in [tr * tr_scale, tr / tr_scale]
+tr_scale: null
+
+# random crop (only valid for flat input space)
+# minimum fraction of image area for crop (max is always 1)
+crop_scale: null
+# aspect ratio scaling factor. observed aspect is sampled between [aspect * crop_aspect,
+# aspect / crop_aspect]
+crop_aspect: null
+
+# grayscale brightness contrast jitter
+gray_jitter: null
+
+# Data loader
+num_workers: 16
+
+# Optimization
+epochs: 100
+# batch size per gpu, so total_batch_size = batch_size * accum * num_gpus_per_node * num_nodes
+batch_size: 32
+accum_iter: 1
+
+# absolute_lr = base_lr * total_batch_size / 256
+base_lr: 1e-3
+# lower lr bound for cyclic schedulers that hit 0
+min_lr: 0.0
+warmup_epochs: 5
+weight_decay: 0.05
+betas: [0.9, 0.95]
+clip_grad: 1.0
+
+amp: true
+# nb, bfloat16 was unstable. esp without head_init_scale=0.0
+amp_dtype: float16
+
+# Checkpoint to use for init
+ckpt: null
+# resume training, or restart
+resume: true
+# Restarting a failed run (with the same output directory) will automatically resume
+auto_resume: true
+# The start epoch is taken from the checkpoint when resuming, but in case you need to
+# manually override.
+start_epoch: 0
+
+# The last checkpoint is always saved, this controls how many extra are kept
+# By default (checkpoint_period=null) only keep the last checkpoint, no intermediates
+max_checkpoints: 0
+checkpoint_period: null
+
+# how often to save plots
+plot_period: 5
+
+device: cuda
+# presend data to cuda asynchronously
+presend_cuda: false
+
+seed: 7338
+debug: false
+
+wandb: true
+wandb_entity: null
+wandb_project: fMRI-foundation-model
