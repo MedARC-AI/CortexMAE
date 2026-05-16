@@ -204,6 +204,13 @@ class A424Unmask(ParcelUnmask):
         super().__init__(parc, dim=424)
 
 
+class Schaefer1000Unmask(ParcelUnmask):
+    def __init__(self):
+        parc_path = nisc.fetch_schaefer(1000, space="fslr64k")
+        parc = nisc.read_cifti_surf_data(parc_path).squeeze(0)
+        super().__init__(parc, dim=1000)
+
+
 class MNICortexUnmask:
     """
     unmasks mni cortex data into patchified format.
@@ -425,7 +432,7 @@ class GrayJitter:
 
 
 def make_transform(
-    space: Literal["flat", "schaefer400", "mni_cortex", "schaefer400_tians3", "a424"] = "flat",
+    space: str = "flat",
     num_frames: int = 16,
     normalize: Literal["global", "frame"] | None = "frame",
     clip_vmax: float | None = 3.0,
@@ -465,9 +472,7 @@ def make_transform(
 
 
 @cache
-def get_unmask(
-    space: Literal["flat", "schaefer400", "mni_cortex", "schaefer400_tians3", "a424"] = "flat",
-):
+def get_unmask(space: str = "flat"):
     """
     return singleton unmask fn.
 
@@ -480,6 +485,7 @@ def get_unmask(
         "mni_cortex": MNICortexUnmask,
         "schaefer400_tians3": Schaefer400TianS3Unmask,
         "a424": A424Unmask,
+        "schaefer1000": Schaefer1000Unmask,
     }[space]
     unmask = unmask_cls()
     return unmask
