@@ -17,6 +17,12 @@ CortexMAE is an fMRI foundation model trained on 2.1K hours of fMRI data from th
 ## Installation
 
 ```bash
+uv pip install cortex_mae
+```
+
+Or install the latest version from github
+
+```bash
 uv pip install "cortex_mae @ git+https://github.com/MedARC-AI/CortexMAE.git"
 ```
 
