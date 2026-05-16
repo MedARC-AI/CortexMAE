@@ -20,7 +20,7 @@ dependencies = [
     "neuromaps",
     "nibabel",
     "nilearn",
-    "numpy",
+    "numpy<2",
     "omegaconf",
     "pillow",
     "platformdirs",
