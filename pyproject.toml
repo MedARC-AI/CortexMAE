@@ -9,43 +9,44 @@ description = "CortexMAE fMRI foundation model"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "braceexpand",
     "brainmarks",
     "datasets",
     "einops",
+    "fsspec",
     "huggingface_hub",
-    "ipython",
     "jaxtyping",
-    "jupyter",
     "matplotlib",
     "neuromaps",
     "nibabel",
-    "nsdcode",
+    "nilearn",
     "numpy",
     "omegaconf",
-    "pre-commit",
-    "pytest",
+    "pillow",
+    "platformdirs",
     "pycortex",
+    "s3fs",
     "scikit-learn",
     "scipy",
     "timm",
     "torch>=2.8.0,<2.13.0",
     "torchvision",
-    "tqdm",
     "wandb",
     "webdataset",
-    "cloudpathlib[s3]",
-    "s3fs",
-    "lightning-sdk",
-    "scikit-image",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
+dev = [
+    "ipython",
+    "jupyter",
+    "pre-commit",
+    "pytest",
+]
 
 [tool.setuptools_scm]
 version_file = "src/cortex_mae/_version.py"
 
 [tool.uv.sources]
-nsdcode = { git = "https://github.com/cvnlab/nsdcode.git", rev = "bfd36a503cc90a3eb3ebfd69b269403f7e186924" }
 neuromaps = { git = "https://github.com/netneurolab/neuromaps.git", rev = "f0ed67c44d633061b93c6d337a1b233f6895c408" }
 
 [tool.ruff]
