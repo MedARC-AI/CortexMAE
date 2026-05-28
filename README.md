@@ -141,16 +141,15 @@ Code is released under the Apache License 2.0 ([LICENSE](LICENSE)). Model weight
 ## Citation
 
 ```bibtex
-@article{lane2025scaling,
-  title   = {Scaling Vision Transformers for Functional {MRI} with Flat Maps},
-  author  = {Lane, Connor and Tripathy, Mihir and Murali, Leema Krishna and
-             Grandhi, Ratna Sagari and Yang, Shamus Sim Zi and Gijsen, Sam and
-             Das, Debojyoti and Ram, Manish and Singh, Utkarsh Kumar and
-             Villanueva, Cesar Kadir Torrico and Wei, Yuxiang and Beddow, Will and
-             Cort\'{e}s, Gianfranco and Cho, Suin and Kaplan, Daniel Z. and
-             Warner, Benjamin and Abraham, Tanishq Mathew and Scotti, Paul S.},
-  journal = {arXiv preprint arXiv:2510.13768},
-  year    = {2025},
-  url     = {https://arxiv.org/abs/2510.13768}
+@inproceedings{lane2026scaling,
+    title={Scaling Vision Transformers for Functional MRI with Flat Maps},
+    author={Connor Lane and Mihir Tripathy and Leema Krishna Murali and
+            Ratna Sagari Grandhi and Shamus Sim Zi Yang and Sam Gijsen and
+            Debojyoti Das and Manish Ram and Utkarsh Kumar Singh and
+            Cesar Kadir Torrico Villanueva and Yuxiang Wei and Will Beddow and
+            Gianfranco Cortés and Suin Cho and Daniel Z. Kaplan
+            and Benjamin Warner and Tanishq Mathew Abraham and Paul S. Scotti},
+    booktitle={ICML},
+    year={2026},
 }
 ```
